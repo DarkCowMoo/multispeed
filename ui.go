@@ -78,8 +78,16 @@ func width(s string) int { return utf8.RuneCountInString(s) }
 func padRight(s string, n int) string { return s + strings.Repeat(" ", max(0, n-width(s))) }
 func padLeft(s string, n int) string  { return strings.Repeat(" ", max(0, n-width(s))) + s }
 
-// version is the release tag for "go install ...@v1.2.3" builds, or "dev".
+// buildVersion is set by release builds:
+// go build -ldflags "-X main.buildVersion=v1.2.3".
+var buildVersion string
+
+// version is the release version: set by the release build, or the tag for
+// "go install ...@v1.2.3" builds, or "dev".
 func version() string {
+	if buildVersion != "" {
+		return buildVersion
+	}
 	if bi, ok := debug.ReadBuildInfo(); ok {
 		return releaseVersion(bi.Main.Version)
 	}
@@ -133,14 +141,47 @@ func printSection(w io.Writer, p palette, name string) {
 	fmt.Fprintf(w, "\n%s %s %s\n", p.accent("━━"), p.title(name), p.accent(rule))
 }
 
-// bar draws value/maxValue as a bar of n cells.
-func bar(p palette, value, maxValue float64, n int) string {
+// barText draws value/maxValue as a plain bar of n cells, e.g. "██████░░░░".
+func barText(value, maxValue float64, n int) string {
 	filled := 0
 	if maxValue > 0 {
 		filled = int(value/maxValue*float64(n) + 0.5)
 	}
 	filled = min(max(filled, 0), n)
-	return p.accent(strings.Repeat("█", filled)) + p.dim(strings.Repeat("░", n-filled))
+	return strings.Repeat("█", filled) + strings.Repeat("░", n-filled)
+}
+
+// colorBar colors the filled part of a bar and dims the rest.
+func colorBar(p palette, bar string) string {
+	i := strings.Index(bar, "░")
+	if i < 0 {
+		return p.accent(bar)
+	}
+	return p.accent(bar[:i]) + p.dim(bar[i:])
+}
+
+// grade colors a bufferbloat grade: A+ and A green, B and C yellow, D and F red.
+func (p palette) grade(g, s string) string {
+	switch g {
+	case "A+", "A":
+		return p.good(s)
+	case "B", "C":
+		return p.fair(s)
+	default:
+		return p.bad(s)
+	}
+}
+
+// level colors text by a verdict level (good, ok, poor).
+func (p palette) level(l, s string) string {
+	switch l {
+	case levelGood:
+		return p.good(s)
+	case levelOK:
+		return p.fair(s)
+	default:
+		return p.bad(s)
+	}
 }
 
 // fmtBytes formats a byte count as "850 MB" or "2.3 GB".

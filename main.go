@@ -5,6 +5,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -12,32 +13,17 @@ import (
 	"log"
 	"math"
 	"os"
-	"os/exec"
 	"os/signal"
-	"path/filepath"
-	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/showwin/speedtest-go/speedtest"
 )
 
-// perTestOverhead is a rough allowance for ping and connection setup per server.
-const perTestOverhead = 5 * time.Second
-
-type options struct {
-	regions     string
-	k           int
-	parallel    int
-	duration    time.Duration
-	maxDistKm   float64
-	noUpload    bool
-	jsonOut     bool
-	csvPath     string
-	listRegions bool
-	pick        bool
-	noColor     bool
-}
+// perTestOverhead is a rough allowance for ping, latency probes and
+// connection setup per server.
+const perTestOverhead = 6 * time.Second
 
 func main() {
 	// net/http reports harmless protocol oddities from servers (such as
@@ -62,112 +48,6 @@ func main() {
 	}
 }
 
-// defineFlags registers every flag on fs. The help text is shown by -h,
-// grouped by flagGroups.
-func defineFlags(fs *flag.FlagSet, o *options) {
-	fs.StringVar(&o.regions, "regions", strings.Join(DefaultRegions, ","),
-		"Regions to test, comma separated. Each is \"local\" (the servers nearest to you),\n"+
-			"a preset such as frankfurt (see -list-regions), or Name=lat,lon for any place.")
-	fs.BoolVar(&o.pick, "pick", false,
-		"Choose the regions from a numbered list of all of them before testing.")
-	fs.BoolVar(&o.listRegions, "list-regions", false,
-		"Show the preset region names and exit.")
-	fs.IntVar(&o.k, "k", 1,
-		"Servers to test in each region. With more than one, the table shows the best and\n"+
-			"the median, so one overloaded server can't make a whole region look slow.\n"+
-			"Try 3 if a region looks oddly slow (it takes 3 times as long).")
-	fs.IntVar(&o.parallel, "parallel", 1,
-		"How many servers to test at the same time. 1 (one by one) gives honest per-region\n"+
-			"speeds. Higher is faster, but parallel tests share your bandwidth.")
-	fs.DurationVar(&o.duration, "duration", 10*time.Second,
-		"How long each download and each upload measurement runs, e.g. 5s or 15s.\n"+
-			"Shorter is faster but less accurate.")
-	fs.Float64Var(&o.maxDistKm, "max-distance", 1000,
-		"Only use servers within this many km of a region's center. Raise it for regions\n"+
-			"with few servers; lower it to stay close to the exact city.")
-	fs.BoolVar(&o.noUpload, "no-upload", false,
-		"Skip the upload test. Roughly halves the run time and data use.")
-	fs.BoolVar(&o.jsonOut, "json", false,
-		"Print full results, including every server, as JSON instead of a table.")
-	fs.StringVar(&o.csvPath, "csv", "",
-		"Also save one row per tested server to this CSV `file` (handy for tracking over time).")
-	fs.BoolVar(&o.noColor, "no-color", false,
-		"Plain text, no colors. Colors are also off when output is not a terminal,\n"+
-			"or when the NO_COLOR environment variable is set.")
-}
-
-// flagGroups orders the flags in -h output. Every flag must appear here.
-var flagGroups = []struct {
-	title string
-	flags []string
-}{
-	{"What to test", []string{"regions", "pick", "list-regions"}},
-	{"How to test", []string{"k", "parallel", "duration", "max-distance", "no-upload"}},
-	{"Output", []string{"json", "csv", "no-color"}},
-}
-
-// flagArgs names the value each non-boolean flag takes, for -h output.
-var flagArgs = map[string]string{
-	"regions": "list", "k": "n", "parallel": "n", "duration": "time",
-	"max-distance": "km", "csv": "file",
-}
-
-func printUsage(fs *flag.FlagSet) {
-	w := fs.Output()
-	fmt.Fprint(w, `multispeed tests your internet speed to several regions of the world,
-using public Speedtest.net servers picked automatically in each region.
-Progress is shown while it runs; results are printed as a table at the end.
-
-Usage:
-  multispeed [flags]
-
-Examples:
-  multispeed                                    your connection + 9 world hubs
-  multispeed -pick                              choose regions from a list
-  multispeed -regions local,frankfurt,newyork   test only these regions
-  multispeed -no-upload                         quicker: download only
-  multispeed -k 3                               3 servers per region, more reliable
-  multispeed -regions "Home=31.77,35.21"        any place, by latitude,longitude
-  multispeed -parallel 3 -csv results.csv       faster, and save every result
-`)
-	for _, g := range flagGroups {
-		fmt.Fprintf(w, "\n%s:\n", g.title)
-		for _, name := range g.flags {
-			f := fs.Lookup(name)
-			if f == nil {
-				continue
-			}
-			head := "  -" + f.Name
-			if arg := flagArgs[f.Name]; arg != "" {
-				head += " " + arg
-			}
-			fmt.Fprintln(w, head)
-			for _, line := range strings.Split(strings.ReplaceAll(f.Usage, "`", ""), "\n") {
-				fmt.Fprintf(w, "        %s\n", line)
-			}
-			if f.DefValue != "" && f.DefValue != "false" {
-				fmt.Fprintf(w, "        (default %s)\n", f.DefValue)
-			}
-		}
-	}
-}
-
-func parseFlags(args []string) (options, map[string]bool, error) {
-	var o options
-	fs := flag.NewFlagSet("multispeed", flag.ContinueOnError)
-	defineFlags(fs, &o)
-	fs.Usage = func() { printUsage(fs) }
-	if err := fs.Parse(args); err != nil {
-		return o, nil, err
-	}
-	if fs.NArg() > 0 {
-		return o, nil, fmt.Errorf("unexpected argument %q (run with -h for help)", fs.Arg(0))
-	}
-	set := map[string]bool{}
-	fs.Visit(func(f *flag.Flag) { set[f.Name] = true })
-	return o, set, nil
-}
-
 func run() error {
 	o, set, err := parseFlags(os.Args[1:])
 	if errors.Is(err, flag.ErrHelp) {
@@ -180,16 +60,41 @@ func run() error {
 		printRegions()
 		return nil
 	}
-	if o.k < 1 || o.parallel < 1 {
-		return errors.New("-k and -parallel must be at least 1")
-	}
 	setupColors(o.noColor)
 	ec := errColors
 
-	printBanner(os.Stderr, ec)
-	if isp := fetchISP(); isp != "" {
-		printInfo(os.Stderr, ec, "Your connection", isp)
+	histPath, histErr := historyPath()
+	if o.showHistory {
+		if histErr != nil {
+			return histErr
+		}
+		hist, loadErr := loadHistory(histPath)
+		if loadErr != nil {
+			return loadErr
+		}
+		return printHistory(os.Stdout, outColors, histPath, hist)
 	}
+	if o.k < 1 || o.parallel < 1 {
+		return errors.New("-k and -parallel must be at least 1")
+	}
+	if o.every != 0 && o.every < time.Minute {
+		return errors.New("-every must be at least 1m")
+	}
+	if histErr != nil {
+		histPath = "" // no history, but the test still runs
+	}
+
+	printBanner(os.Stderr, ec)
+	me := fetchUser()
+	runID := newRunID()
+	if me.isp != "" {
+		printInfo(os.Stderr, ec, "Your connection", me.isp)
+	}
+	if me.ip != "" {
+		// Shown for visibility only; the IP is not saved to history or reports.
+		printInfo(os.Stderr, ec, "Your IP", me.ip)
+	}
+	printInfo(os.Stderr, ec, "Run ID", runID)
 	// The picker runs before Ctrl+C is captured, so Ctrl+C still quits it.
 	if o.pick {
 		if !isTerminal(os.Stdin) {
@@ -207,11 +112,51 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	for i := range regions {
+		if regions[i].Local && me.located {
+			regions[i].Lat, regions[i].Lon = me.lat, me.lon // for the map
+		}
+	}
 	printInfo(os.Stderr, ec, "Plan", planSummary(len(regions), o))
+	if o.every > 0 {
+		printInfo(os.Stderr, ec, "Repeat", "every "+fmtDur(o.every)+", until you press Ctrl+C")
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
+	for round := 1; ; round++ {
+		info := runInfo{id: runID, isp: me.isp}
+		if o.every > 0 {
+			info.round = round
+			printSection(os.Stderr, ec, fmt.Sprintf("Round %d · %s", round, time.Now().Format("15:04")))
+		}
+		err = testRound(ctx, regions, o, info, histPath)
+		if o.every == 0 || ctx.Err() != nil {
+			break
+		}
+		if err != nil {
+			logf("  %s\n", ec.bad("This round failed: "+err.Error()))
+		}
+		next := time.Now().Add(o.every)
+		logf("\n  %s\n", ec.dim(fmt.Sprintf("Next round at %s. Press Ctrl+C to stop.", next.Format("15:04"))))
+		select {
+		case <-ctx.Done():
+		case <-time.After(time.Until(next)):
+		}
+		if ctx.Err() != nil {
+			break
+		}
+	}
+	logf("\n  %s\n  %s\n\n", ec.dim("Run exactly this test again:"),
+		ec.accent(rerunCommand(programName(), o, set)))
+	return err
+}
+
+// testRound finds servers, tests them, compares with history and shows,
+// saves and exports the results.
+func testRound(ctx context.Context, regions []Region, o options, info runInfo, histPath string) error {
+	ec := errColors
 	printSection(os.Stderr, ec, "Finding servers")
 	found := discover(ctx, regions, o)
 	if len(found.jobs) == 0 {
@@ -227,26 +172,105 @@ func run() error {
 		len(found.jobs), pace, fmtDur(estimate(len(found.jobs), o)))))
 
 	results, stats := runTests(ctx, found.jobs, found.backups, o)
-	summaries := summarize(regions, results, found.notes)
+	sums := summarize(regions, results, found.notes, o.noUpload)
 
-	if o.csvPath != "" {
-		if csvErr := writeCSV(o.csvPath, results); csvErr != nil {
-			logf("could not write CSV: %v\n", csvErr)
+	var hist []HistoryEntry
+	if histPath != "" {
+		var err error
+		if hist, err = loadHistory(histPath); err != nil {
+			logf("  could not read history: %v\n", err)
 		}
 	}
-	if o.jsonOut {
-		err = writeJSON(os.Stdout, summaries)
-	} else {
-		oc := outColors
-		printSection(os.Stdout, oc, "Results")
-		fmt.Println()
-		err = printTable(os.Stdout, summaries, o.noUpload, oc)
-		fmt.Printf("\n  %s\n", oc.dim(fmt.Sprintf("Data used %s · took %s",
-			fmtBytes(stats.dataBytes), fmtDur(stats.elapsed))))
+	compareWithHistory(sums, hist)
+
+	if o.route && ctx.Err() == nil {
+		printSection(os.Stderr, ec, "Tracing routes")
+		traceRoutes(ctx, sums)
 	}
-	logf("\n  %s\n  %s\n\n", ec.dim("Run exactly this test again:"),
-		ec.accent(rerunCommand(programName(), o, set)))
-	return err
+	report := newReport(o, info, sums, stats)
+
+	saved := false
+	if !o.noSave && histPath != "" {
+		e := historyEntry(&report)
+		if err := appendHistory(histPath, e); err != nil {
+			logf("  could not save history: %v\n", err)
+		} else if len(e.Regions) > 0 {
+			hist = append(hist, e)
+			saved = true
+		}
+	}
+	if o.csvPath != "" {
+		if err := writeCSV(o.csvPath, results); err != nil {
+			logf("  could not write CSV: %v\n", err)
+		}
+	}
+	if o.htmlPath != "" {
+		if err := writeHTML(o.htmlPath, &report, hist); err != nil {
+			logf("  could not write HTML report: %v\n", err)
+		}
+	}
+
+	if o.jsonOut {
+		if o.every > 0 { // one compact line per round: JSON Lines
+			return json.NewEncoder(os.Stdout).Encode(report)
+		}
+		return writeJSON(os.Stdout, report)
+	}
+	return printResults(os.Stdout, &report, o, saved)
+}
+
+// printResults shows the results, what each region is good for, the map and
+// the routes.
+func printResults(w io.Writer, r *Report, o options, saved bool) error {
+	oc := outColors
+	printSection(w, oc, "Results")
+	fmt.Fprintln(w)
+	if err := printTable(w, r.Regions, o.noUpload, oc); err != nil {
+		return err
+	}
+	footer := fmt.Sprintf("Run %s · data used %s · took %s", r.RunID, fmtBytes(r.DataBytes),
+		fmtDur(time.Duration(r.Seconds*float64(time.Second))))
+	if saved {
+		footer += " · saved to history (multispeed -history)"
+	}
+	fmt.Fprintf(w, "\n  %s\n", oc.dim(footer))
+
+	printSection(w, oc, "What it's good for")
+	fmt.Fprintln(w)
+	if err := printGoodFor(w, r.Regions, oc); err != nil {
+		return err
+	}
+	if anyGraded(r.Regions) {
+		fmt.Fprintf(w, "\n  %s\n", oc.dim("Bloat = how much ping rises while your line is busy. "+
+			"A+/A: smooth calls and games even during downloads; D/F: lag spikes."))
+	}
+
+	if !o.noMap {
+		var m strings.Builder
+		if err := printMap(&m, r.Regions, oc); err == nil && m.Len() > 0 {
+			printSection(w, oc, "Map")
+			fmt.Fprintln(w)
+			_, _ = io.WriteString(w, m.String())
+		}
+	}
+	if o.route {
+		printSection(w, oc, "Routes")
+		fmt.Fprintln(w)
+		printRoutes(w, r.Regions, oc)
+	}
+	if o.htmlPath != "" {
+		fmt.Fprintf(w, "\n  %s %s\n", oc.dim("Report saved to"), oc.accent(o.htmlPath))
+	}
+	return nil
+}
+
+func anyGraded(sums []RegionSummary) bool {
+	for i := range sums {
+		if sums[i].Grade != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // planSummary describes the run, e.g. "3 regions × 1 server, download only, about 1m".
@@ -263,15 +287,29 @@ func planSummary(regions int, o options) string {
 		regions, o.k, servers, what, fmtDur(estimate(regions*o.k, o)))
 }
 
-// fetchISP returns the name of your internet provider, or "" if unknown.
-func fetchISP() string {
+// user is what Speedtest.net knows about this connection.
+type user struct {
+	isp      string
+	ip       string
+	lat, lon float64
+	located  bool
+}
+
+// fetchUser looks up your internet provider and approximate location.
+func fetchUser() user {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	u, err := speedtest.New().FetchUserInfoContext(ctx)
 	if err != nil || u == nil {
-		return ""
+		return user{}
 	}
-	return u.Isp
+	me := user{isp: u.Isp, ip: u.IP}
+	lat, errLat := strconv.ParseFloat(u.Lat, 64)
+	lon, errLon := strconv.ParseFloat(u.Lon, 64)
+	if errLat == nil && errLon == nil && (lat != 0 || lon != 0) {
+		me.lat, me.lon, me.located = lat, lon, true
+	}
+	return me
 }
 
 // estimate is the rough total run time for n servers.
@@ -282,78 +320,6 @@ func estimate(n int, o options) time.Duration {
 	}
 	rounds := math.Ceil(float64(n) / float64(o.parallel))
 	return time.Duration(rounds) * perTest
-}
-
-// rerunCommand rebuilds the command line for the flags that were set
-// (including regions picked interactively), in a stable order.
-func rerunCommand(prog string, o options, set map[string]bool) string {
-	values := map[string]string{
-		"regions":      o.regions,
-		"k":            fmt.Sprint(o.k),
-		"parallel":     fmt.Sprint(o.parallel),
-		"duration":     o.duration.String(),
-		"max-distance": fmt.Sprint(o.maxDistKm),
-		"csv":          o.csvPath,
-	}
-	bools := map[string]bool{"no-upload": o.noUpload, "json": o.jsonOut}
-
-	names := make([]string, 0, len(set))
-	for name := range set {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	// regions first: it is the main choice.
-	sort.SliceStable(names, func(i, j int) bool { return names[i] == "regions" && names[j] != "regions" })
-
-	parts := []string{prog}
-	for _, name := range names {
-		if v, ok := bools[name]; ok {
-			if v {
-				parts = append(parts, "-"+name)
-			}
-			continue
-		}
-		if v, ok := values[name]; ok {
-			parts = append(parts, "-"+name, shellQuote(v))
-		}
-	}
-	return strings.Join(parts, " ")
-}
-
-// shellQuote quotes s if it contains characters a shell would split or expand.
-func shellQuote(s string) string {
-	if s != "" && !strings.ContainsAny(s, " \t\"'$&|;<>()*?!`") {
-		return s
-	}
-	return `"` + strings.ReplaceAll(s, `"`, `\"`) + `"`
-}
-
-// programName is how to type this program again: "go run ." for a go run
-// build, ".\multispeed.exe" (or "./multispeed") when it is in the current
-// folder, its bare name when it is on PATH, or else its full path.
-func programName() string {
-	self := os.Args[0]
-	if abs, err := filepath.Abs(self); err == nil {
-		self = abs
-	}
-	if strings.Contains(filepath.ToSlash(self), "/go-build") {
-		return "go run ."
-	}
-	base := filepath.Base(self)
-	if wd, err := os.Getwd(); err == nil && sameDir(filepath.Dir(self), wd) {
-		return "." + string(filepath.Separator) + base
-	}
-	name := strings.TrimSuffix(base, filepath.Ext(base))
-	if p, err := exec.LookPath(name); err == nil {
-		if abs, err := filepath.Abs(p); err == nil && strings.EqualFold(abs, self) {
-			return name
-		}
-	}
-	return shellQuote(self)
-}
-
-func sameDir(a, b string) bool {
-	return strings.EqualFold(filepath.Clean(a), filepath.Clean(b))
 }
 
 func printRegions() {

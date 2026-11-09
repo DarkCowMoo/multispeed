@@ -16,7 +16,6 @@ func TestPaletteOffIsPlain(t *testing.T) {
 }
 
 func TestBar(t *testing.T) {
-	var p palette
 	tests := []struct {
 		v, maxV float64
 		want    string
@@ -28,9 +27,13 @@ func TestBar(t *testing.T) {
 		{200, 100, "████"},
 	}
 	for _, tt := range tests {
-		if got := bar(p, tt.v, tt.maxV, 4); got != tt.want {
-			t.Errorf("bar(%v, %v) = %q, want %q", tt.v, tt.maxV, got, tt.want)
+		if got := barText(tt.v, tt.maxV, 4); got != tt.want {
+			t.Errorf("barText(%v, %v) = %q, want %q", tt.v, tt.maxV, got, tt.want)
 		}
+	}
+	on := palette{on: true}
+	if got := colorBar(on, "██░░"); got != on.accent("██")+on.dim("░░") {
+		t.Errorf("colorBar = %q", got)
 	}
 }
 
@@ -91,7 +94,7 @@ func TestReleaseVersion(t *testing.T) {
 
 func TestPlanSummary(t *testing.T) {
 	o := options{k: 1, parallel: 1, duration: 10e9, noUpload: true}
-	if got := planSummary(3, o); got != "3 regions × 1 server, download only, about 45s" {
+	if got := planSummary(3, o); got != "3 regions × 1 server, download only, about 48s" {
 		t.Errorf("plan = %q", got)
 	}
 }

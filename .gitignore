@@ -1,5 +1,5 @@
-multispeed
-multispeed.exe
+/multispeed
+/multispeed.exe
 dist/
 *.csv
 *.exe~

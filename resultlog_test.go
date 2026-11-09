@@ -19,7 +19,7 @@ func TestResultLogLayout(t *testing.T) {
 	l.add(3, &ServerResult{Region: "Frankfurt", Sponsor: "Dead", Error: "no data transferred"}, nil)
 
 	want := strings.Join([]string{
-		"         Server                           Ping      Download        Upload",
+		"         Server                           Ping      Download        Upload  Bloat",
 		"Local (nearest)",
 		"    1/3  NetFiber                         6 ms    916.2 Mbps     97.8 Mbps",
 		"Frankfurt",

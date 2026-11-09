@@ -16,8 +16,8 @@ func TestTrackerStatus(t *testing.T) {
 	tr.update(a, "NTT DATA, Inc.", "download 512 Mbps")
 	now = now.Add(5 * time.Second)
 	got := tr.status()
-	// Before any test finishes, time left comes from the estimate: 3*(10s+5s) - 5s.
-	want := "[1/3] Frankfurt NTT DATA, Inc.: download 512 Mbps | 5s elapsed, ~40s left"
+	// Before any test finishes, time left comes from the estimate: 3*(10s+6s) - 5s.
+	want := "[1/3] Frankfurt NTT DATA, Inc.: download 512 Mbps | 5s elapsed, ~43s left"
 	if got != want {
 		t.Errorf("status =\n  %q\nwant\n  %q", got, want)
 	}

@@ -22,6 +22,8 @@ const (
 	nearestFactor = 4
 	// lookupConcurrency is how many regions are looked up at the same time.
 	lookupConcurrency = 4
+	// regionLabelWidth aligns region names in the discovery log.
+	regionLabelWidth = 16
 )
 
 // candidate is a server considered for a region.
@@ -78,7 +80,7 @@ func discover(ctx context.Context, regions []Region, o options) discovery {
 		d.backups[i] = p.backups
 		d.notes[i] = p.note
 		if p.note != "" && len(p.jobs) == 0 {
-			logf("  %s %s\n", errColors.bold(padRight(regions[i].Name, regionCol)),
+			logf("  %s %s\n", errColors.bold(padRight(regions[i].Name, regionLabelWidth)),
 				errColors.bad("skipped: "+p.note))
 		}
 	}
@@ -128,7 +130,7 @@ func discoverRegion(ctx context.Context, idx int, r Region, o options) regionPic
 		}
 	}
 	ec := errColors
-	logf("  %s %s %s\n", ec.bold(padRight(r.Name, regionCol)), serverNames(p.jobs),
+	logf("  %s %s %s\n", ec.bold(padRight(r.Name, regionLabelWidth)), serverNames(p.jobs),
 		ec.dim(fmt.Sprintf("(+%d backup)", len(p.backups))))
 	return p
 }

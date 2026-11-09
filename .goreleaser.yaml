@@ -1,0 +1,50 @@
+# Builds release binaries when a version tag (v1.2.3) is pushed.
+# See .github/workflows/release.yml. Check locally: goreleaser check
+version: 2
+
+project_name: multispeed
+
+before:
+  hooks:
+    - go mod tidy
+    - go test -short ./...
+
+builds:
+  - id: multispeed
+    binary: multispeed
+    env:
+      - CGO_ENABLED=0
+    goos: [windows, linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.buildVersion=v{{ .Version }}
+
+archives:
+  # Zip/tar.gz with the README and license.
+  - id: archive
+    ids: [multispeed]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files: [README.md, LICENSE]
+  # The bare program too, so Windows users can download the .exe and double-click it.
+  - id: binary
+    ids: [multispeed]
+    formats: [binary]
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude: ["^docs:", "^test:"]
+
+release:
+  footer: |
+    **Windows:** download `multispeed_windows_amd64.exe` and double-click it.
+    **macOS / Linux:** download the archive for your system, then run `./multispeed` in a terminal.

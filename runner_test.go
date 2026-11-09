@@ -83,7 +83,7 @@ func TestEndToEndAgainstFakeServers(t *testing.T) {
 			t.Errorf("%s: expected positive results, got %+v", r.Sponsor, *r)
 		}
 	}
-	sums := summarize([]Region{{Name: "A"}, {Name: "B"}}, res, []string{"", ""})
+	sums := summarize([]Region{{Name: "A"}, {Name: "B"}}, res, []string{"", ""}, false)
 	if sums[0].OK != 2 || sums[1].OK != 1 || sums[0].BestDownMbps <= 0 {
 		t.Errorf("bad summaries: %+v", sums)
 	}

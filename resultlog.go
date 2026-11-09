@@ -12,6 +12,7 @@ const (
 	serverWidth = 28 // server (sponsor) name
 	pingWidth   = 7  // "126 ms"
 	speedWidth  = 12 // "916.2 Mbps"
+	gradeWidth  = 2  // "A+"
 )
 
 // resultLog prints one aligned line per tested server, under a column header
@@ -50,6 +51,7 @@ func (l *resultLog) add(done int, j *ServerResult, failed []string) {
 		if !l.noUpload {
 			cols = append(cols, padLeft("Upload", speedWidth))
 		}
+		cols = append(cols, padRight("Bloat", gradeWidth))
 		l.printf("%s", p.dim(row(cols...)))
 		l.headerDone = true
 	}
@@ -75,6 +77,10 @@ func (l *resultLog) add(done int, j *ServerResult, failed []string) {
 	}
 	if !l.noUpload {
 		cols = append(cols, padLeft(fmt.Sprintf("%.1f Mbps", j.UpMbps), speedWidth))
+	}
+	if j.Grade != "" {
+		cols = append(cols, p.grade(j.Grade, padRight(j.Grade, 2))+
+			p.dim(fmt.Sprintf(" +%.0f ms under load", j.BloatMs)))
 	}
 	l.printf("%s", row(cols...))
 }

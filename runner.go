@@ -116,15 +116,33 @@ func testOne(ctx context.Context, j *ServerResult, o options, setPhase func(stri
 	}
 	j.PingMs = toMs(s.Latency)
 	j.JitterMs = toMs(s.Jitter)
+
+	// Latency under load: ping the same server while the line is busy and
+	// compare with the idle latency measured the same way.
+	host := probeHost(s.Host, s.URL)
+	if idle, ok := idleLatency(ctx, host); ok {
+		j.IdleMs, j.idleOK = toMs(idle), true
+	}
+
 	setPhase("download")
-	if err := s.DownloadTestContext(ctx); err != nil {
+	probe := startProbe(ctx, host)
+	err := s.DownloadTestContext(ctx)
+	if loaded, ok := probe.finish(); ok {
+		j.LoadedDownMs, j.loadedOK = toMs(loaded), true
+	}
+	if err != nil {
 		j.Error = "download: " + err.Error()
 		return used()
 	}
 	j.DownMbps = toMbps(s.DLSpeed)
 	if !o.noUpload {
 		setPhase("upload")
-		if err := s.UploadTestContext(ctx); err != nil {
+		probe = startProbe(ctx, host)
+		err = s.UploadTestContext(ctx)
+		if loaded, ok := probe.finish(); ok {
+			j.LoadedUpMs, j.loadedOK = toMs(loaded), true
+		}
+		if err != nil {
 			j.Error = "upload: " + err.Error()
 			return used()
 		}
@@ -132,7 +150,9 @@ func testOne(ctx context.Context, j *ServerResult, o options, setPhase func(stri
 	}
 	if j.DownMbps <= 0 && (o.noUpload || j.UpMbps <= 0) {
 		j.Error = "no data transferred"
+		return used()
 	}
+	j.gradeBloat()
 	return used()
 }
 
