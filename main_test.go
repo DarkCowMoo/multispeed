@@ -30,7 +30,7 @@ func TestEveryFlagHasHelp(t *testing.T) {
 	var b strings.Builder
 	fs.SetOutput(&b)
 	printUsage(fs)
-	for _, want := range []string{"-regions list", "-k n", "-csv file", "(default 3)", "Examples:"} {
+	for _, want := range []string{"-regions list", "-k n", "-csv file", "(default 1)", "Examples:"} {
 		if !strings.Contains(b.String(), want) {
 			t.Errorf("help is missing %q", want)
 		}

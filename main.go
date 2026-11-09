@@ -8,6 +8,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"log"
 	"math"
 	"os"
 	"os/exec"
@@ -38,6 +40,12 @@ type options struct {
 }
 
 func main() {
+	// net/http reports harmless protocol oddities from servers (such as
+	// "Unsolicited response received on idle HTTP channel") through the
+	// standard logger, which would print raw bytes over our output. All of
+	// our own messages go through logf, so the standard logger is silenced.
+	log.SetOutput(io.Discard)
+
 	// A double-clicked .exe gets its own console window, which Windows closes
 	// as soon as the program exits; keep it open so the results can be read.
 	keepOpen := ownsConsoleWindow()
@@ -64,9 +72,10 @@ func defineFlags(fs *flag.FlagSet, o *options) {
 		"Choose the regions from a numbered list of all of them before testing.")
 	fs.BoolVar(&o.listRegions, "list-regions", false,
 		"Show the preset region names and exit.")
-	fs.IntVar(&o.k, "k", 3,
-		"Servers to test in each region. The table shows the best and the median, so one\n"+
-			"overloaded server can't make a whole region look slow. Use 1 for a quick check.")
+	fs.IntVar(&o.k, "k", 1,
+		"Servers to test in each region. With more than one, the table shows the best and\n"+
+			"the median, so one overloaded server can't make a whole region look slow.\n"+
+			"Try 3 if a region looks oddly slow (it takes 3 times as long).")
 	fs.IntVar(&o.parallel, "parallel", 1,
 		"How many servers to test at the same time. 1 (one by one) gives honest per-region\n"+
 			"speeds. Higher is faster, but parallel tests share your bandwidth.")
@@ -116,7 +125,8 @@ Examples:
   multispeed                                    your connection + 9 world hubs
   multispeed -pick                              choose regions from a list
   multispeed -regions local,frankfurt,newyork   test only these regions
-  multispeed -k 1 -no-upload                    quick check of the default regions
+  multispeed -no-upload                         quicker: download only
+  multispeed -k 3                               3 servers per region, more reliable
   multispeed -regions "Home=31.77,35.21"        any place, by latitude,longitude
   multispeed -parallel 3 -csv results.csv       faster, and save every result
 `)

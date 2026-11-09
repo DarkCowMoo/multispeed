@@ -7,28 +7,33 @@ you can reach Europe, the US or Asia. multispeed picks good public Speedtest.net
 region automatically, tests them one by one or in parallel, and gives you one comparison table.
 
 ```
-Region           Ping ms  Jitter  Down Mbps  (median)  Up Mbps   OK  Best server
-Local (nearest)        4     0.6      912.3     905.1    94.2   3/3  Bezeq (Tel Aviv)
-Frankfurt             58     1.2      431.0     402.7    90.8   3/3  Hetzner (Frankfurt)
-New York             132     2.4      188.5     160.2    71.0   3/3  Ookla (New York, NY)
-Tokyo                208     3.1       96.4      90.0    40.3   2/3  IPA (Tokyo)
-...
+━━ Results ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Region              Ping  Jitter     Download                Median       Upload   OK  Best server
+  Local (nearest)     6 ms  0.5 ms   775.2 Mbps  ████████████     775    94.7 Mbps  1/1  Bezeq International (Petah…
+  Frankfurt          65 ms  0.8 ms   650.5 Mbps  ██████████░░     651    94.5 Mbps  1/1  NTT DATA, Inc. (Frankfurt)
+  New York          126 ms  0.4 ms   422.9 Mbps  ███████░░░░░     423    91.6 Mbps  1/1  Surfshark Ltd (New York, NY)
+  Tokyo             251 ms  2.5 ms   157.3 Mbps  ██░░░░░░░░░░     157    58.4 Mbps  1/1  Contabo (Tokyo)
+  ...
+
+  Data used 3.1 GB · took 4m40s
 ```
-*(example output)*
+*(example output; in a terminal, ping and speeds are colored green, yellow or red)*
 
 ## Quick start
 
 Download the file for your system from the releases, then run it in a terminal:
 
 On Windows you can simply **double-click `multispeed.exe`**: it tests your connection plus 9 world
-hubs, and the window stays open at the end until you press Enter.
+hubs (about 5 minutes), and the window stays open at the end until you press Enter.
 
 ```sh
-./multispeed                     # your connection + 9 world hubs, 3 servers each
+./multispeed                     # your connection + 9 world hubs, 1 server each
 ./multispeed -pick               # choose regions from a numbered list of all 29
 ./multispeed -h                  # every option, explained, with examples
+./multispeed -k 3                # 3 servers per region: more reliable, 3x longer
 ./multispeed -parallel 3         # test 3 servers at once (faster)
-./multispeed -regions local,frankfurt,london,newyork -k 2
+./multispeed -regions local,frankfurt,london,newyork
 ./multispeed -regions "local,Home=31.77,35.21,singapore"   # any place by coordinates
 ./multispeed -list-regions       # show the built-in region names
 ```
@@ -41,7 +46,7 @@ runs, a live line shows the current server, what it is doing (ping, download or 
 speed so far), and the time elapsed and left. Results are colored: ping and speed are green, yellow
 or red, and each region gets a bar comparing its download with your best region. At the end it
 shows the data used and prints the exact command to run the same test again, for example
-`.\multispeed.exe -regions local,frankfurt,tokyo -k 1`. Use `-no-color` (or set `NO_COLOR`) for
+`.\multispeed.exe -regions local,frankfurt,tokyo -no-upload`. Use `-no-color` (or set `NO_COLOR`) for
 plain text.
 
 On Windows, use `multispeed.exe`. On macOS, if the file is blocked the first time, run
@@ -52,10 +57,11 @@ On Windows, use `multispeed.exe`. On macOS, if the file is blocked the first tim
 1. For each region, it asks Speedtest.net for servers near that region's coordinates.
 2. It drops servers that don't answer, or that are more than `-max-distance` km (default 1000)
    from the region's center.
-3. From the nearest candidates, it keeps the `-k` servers (default 3) with the lowest ping from you.
+3. From the nearest candidates, it keeps the `-k` servers (default 1) with the lowest ping from
+   you, plus 2 backups in case a server answers but then sends no data.
 4. It measures ping, jitter, download and upload on each one, then reports the **best** and
-   **median** download for the region. Testing several servers protects against one overloaded
-   volunteer server making a whole region look slow.
+   **median** download for the region. With `-k 3`, testing several servers protects against one
+   overloaded volunteer server making a whole region look slow.
 
 ## Options
 
@@ -66,7 +72,7 @@ On Windows, use `multispeed.exe`. On macOS, if the file is blocked the first tim
 | `-regions` | local + 9 hubs | `local`, preset names, or `Name=lat,lon`, comma separated |
 | `-pick` | off | choose the regions from a numbered list |
 | `-list-regions` | | show the preset region names and exit |
-| `-k` | 3 | servers tested per region; the table shows the best and the median |
+| `-k` | 1 | servers tested per region; the table shows the best and the median |
 | `-parallel` | 1 | servers tested at the same time (faster, but they share your bandwidth) |
 | `-duration` | 10s | length of each download / upload measurement |
 | `-max-distance` | 1000 | max km between a server and its region's center |
@@ -83,8 +89,9 @@ On Windows, use `multispeed.exe`. On macOS, if the file is blocked the first tim
 - **Far = slower is partly normal:** with high ping, a single connection can't fill a fast line.
   multispeed uses several connections at once, but expect some drop with distance even on a perfect
   network. A big drop for one region compared with others at similar distance is the interesting signal.
-- **Each full run uses data:** on a fast line, 30 tests can use several GB. Use `-k 1`,
-  `-no-upload` or fewer regions on metered connections.
+- **Each run uses data:** on a fast line, the default 10 tests use a few GB. Use `-no-upload`,
+  a shorter `-duration` or fewer regions on metered connections.
+- **One server can be unlucky:** if a region looks oddly slow, run it again with `-k 3`.
 
 ## Building from source
 
