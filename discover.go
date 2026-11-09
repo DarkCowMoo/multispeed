@@ -93,7 +93,7 @@ func discoverRegion(ctx context.Context, idx int, r Region, o options) regionPic
 	if !r.Local {
 		cfg.Location = &speedtest.Location{Name: r.Name, Lat: r.Lat, Lon: r.Lon}
 	}
-	client := speedtest.New(speedtest.WithUserConfig(cfg))
+	client := newClient(cfg)
 	servers, err := client.FetchServerListContext(ctx)
 	if err != nil {
 		return regionPick{note: "server lookup failed: " + err.Error()}

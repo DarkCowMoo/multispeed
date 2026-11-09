@@ -17,8 +17,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/showwin/speedtest-go/speedtest"
 )
 
 // perTestOverhead is a rough allowance for ping, latency probes and
@@ -299,7 +297,7 @@ type user struct {
 func fetchUser() user {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	u, err := speedtest.New().FetchUserInfoContext(ctx)
+	u, err := newClient(nil).FetchUserInfoContext(ctx)
 	if err != nil || u == nil {
 		return user{}
 	}

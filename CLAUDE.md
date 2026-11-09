@@ -19,6 +19,8 @@ Also check `GOOS=linux` and `GOOS=darwin` builds when touching `vt_*.go` or `rou
   except loopback `httptest` servers; set `MULTISPEED_HISTORY` to a temp file in tests that save.
 - Progress and messages go to stderr through `logf` (never `fmt.Print` or the `log` package);
   results go to stdout. `-json` output must stay valid JSON on stdout.
+- Create speedtest clients only with `newClient` (client.go), never `speedtest.New` directly:
+  the library rewires the global `http.DefaultClient` and races under `-race` otherwise.
 - Colors only through `palette` (`errColors` for stderr, `outColors` for stdout). Pad plain text
   first, then color it, so alignment never counts escape codes.
 - The JSON field names in `report.go` are a public interface (used by scripts and the Claude

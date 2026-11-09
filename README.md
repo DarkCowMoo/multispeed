@@ -201,6 +201,7 @@ each round prints one JSON object per line (JSON Lines).
 | `picker.go` | the interactive region list shown with `-pick` |
 | `discover.go` | finding and choosing servers for each region (with backups) |
 | `runner.go` | running the tests, retrying failed servers with backups, data used |
+| `client.go` | creating speedtest clients safely in parallel |
 | `latency.go` | idle and loaded latency (bufferbloat) probes |
 | `quality.go` | bufferbloat grades and "good for" verdicts |
 | `report.go` | result types, per-region summary, tables, JSON, CSV |

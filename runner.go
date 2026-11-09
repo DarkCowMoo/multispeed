@@ -97,7 +97,7 @@ func testOne(ctx context.Context, j *ServerResult, o options, setPhase func(stri
 		return 0
 	}
 	// Each test gets its own client so parallel tests don't share counters.
-	client := speedtest.New()
+	client := newClient(nil)
 	used := func() int64 { return client.GetTotalDownload() + client.GetTotalUpload() }
 	client.SetCaptureTime(o.duration)
 	client.SetCallbackDownload(func(r speedtest.ByteRate) {
