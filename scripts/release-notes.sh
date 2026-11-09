@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 # Prints the CHANGELOG.md section for one version, for the release page.
-# Usage: scripts/release-notes.sh 0.1.0 [CHANGELOG.md]
+# Usage: scripts/release-notes.sh 0.1.0 [CHANGELOG.md]   ("-" or /dev/stdin reads stdin)
 # Exits with an error if the version has no section or the section is empty,
 # so a release cannot go out without notes.
 set -eu

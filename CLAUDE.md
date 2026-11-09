@@ -21,14 +21,13 @@ one way: `cli → ui → results → measure → regions`.
 - `main` holds released code. It is updated only by a pull request from `dev`, and release
   tags (`vX.Y.Z`) are made on `main`; `.github/workflows/release.yml` runs GoReleaser.
 - User-facing changes get a line under **Unreleased** in `CHANGELOG.md`.
-- To release X.Y.Z:
-  1. On a branch from `dev`: merge `origin/main` into it (so the previous release tag is in
-     `dev`'s history; otherwise builds from `dev` show version 0.0.0.0), and rename
-     **Unreleased** to `## [X.Y.Z] - date` with its link at the bottom. PR into `dev`, merged
-     with a merge commit (not squash, which would drop the merge of `main`).
-  2. PR `dev` → `main`, merged with a merge commit.
-  3. Tag `vX.Y.Z` on `main` and push it. The release page shows that version's changelog
-     section (`scripts/release-notes.sh`); a tag without a section fails the release.
+- `VERSION` holds the current version. Releasing is `scripts/release.sh X.Y.Z` (maintainer
+  only: it merges with admin rights). It prepares the release on `dev` (merges `main` in, so
+  the previous tag stays in `dev`'s history; sets `VERSION`; turns **Unreleased** into
+  `## [X.Y.Z] - date`), merges `dev` into `main`, and follows the Release workflow, which
+  tags `vX.Y.Z` itself when `main` has a `VERSION` without a tag, then publishes with that
+  version's changelog section as notes. `--prepare-only` stops after the local commit.
+- Merge release PRs with a merge commit, never squash (squash would drop the merge of `main`).
 - Both are protected: changes need a pull request, an approving review and passing CI.
 
 ## Before finishing a change

@@ -234,9 +234,10 @@ golangci-lint run ./...    # config in .golangci.yml (golangci-lint v2)
 go test ./...              # add -short to skip the slower fake-server tests
 ```
 
-CI runs the linter, plus tests with `-race` on Linux, Windows and macOS. Pushing a tag such as
-`v0.2.0` builds and publishes release binaries with GoReleaser, with that version's section of
-[CHANGELOG.md](CHANGELOG.md) as the release notes. Contributions go to the `dev` branch: see
+CI runs the linter, plus tests with `-race` on Linux, Windows and macOS, and a release dry run.
+The maintainer releases with `scripts/release.sh X.Y.Z`: once `main` has the new `VERSION`, the
+Release workflow tags it and publishes the binaries with GoReleaser, with that version's section
+of [CHANGELOG.md](CHANGELOG.md) as the release notes. Contributions go to the `dev` branch: see
 [CONTRIBUTING.md](CONTRIBUTING.md). `CLAUDE.md` has the conventions for anyone (or any Claude)
 working on the code.
 

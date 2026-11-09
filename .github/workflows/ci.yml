@@ -60,8 +60,10 @@ jobs:
             fi
             echo "$exe: $(strings -el "$exe" | grep -A1 -x 'FileVersion' | tail -1)"
           done
-      - name: Release notes extraction works
-        run: sh scripts/release-notes.sh 0.1.0 > /dev/null
+      - name: CHANGELOG.md has notes for the version in VERSION
+        run: sh scripts/release-notes.sh "$(tr -d '[:space:]' < VERSION)" > /dev/null
+      - name: Release scripts pass ShellCheck
+        run: shellcheck -S warning scripts/*.sh
 
   # go.mod sets the minimum Go for "go install"; make sure that still builds and passes.
   min-go:
