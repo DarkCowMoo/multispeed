@@ -82,6 +82,27 @@ go test ./...
 
 Cross-compile, for example for Windows: `GOOS=windows GOARCH=amd64 go build -o multispeed.exe .`
 
+## Development
+
+| File | Contents |
+|---|---|
+| `main.go` | flags and the top-level `run` flow |
+| `regions.go` | preset regions and `-regions` parsing |
+| `discover.go` | finding and choosing servers for each region (with backups) |
+| `runner.go` | running the tests, retrying failed servers with backups |
+| `report.go` | result types, per-region summary, table / JSON / CSV output |
+
+Each file has a matching `_test.go`. Before sending changes, run:
+
+```sh
+gofmt -l .                 # must print nothing
+golangci-lint run ./...    # config in .golangci.yml (golangci-lint v2)
+go test ./...              # add -short to skip the slower fake-server tests
+```
+
+CI (`.github/workflows/ci.yml`) runs the linter, plus tests with `-race` on Linux, Windows and macOS.
+Line endings are LF everywhere (`.gitattributes`), so gofmt gives the same result on Windows.
+
 ## Credits
 
 Speed measurement uses [showwin/speedtest-go](https://github.com/showwin/speedtest-go) (MIT).
