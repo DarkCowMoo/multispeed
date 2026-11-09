@@ -4,16 +4,18 @@ Thanks for helping! A few things to know first.
 
 ## Branches
 
-- **`dev`** is where development happens. Open your pull request against `dev` (it is the
-  default branch, so GitHub picks it for you).
-- **`main`** holds released code. It only changes when `dev` is merged into it for a release.
+- **`dev`** is where development happens. **Open your pull request against `dev`.** GitHub
+  suggests `main` (the default branch), so change the *base* to `dev` when you open the pull
+  request; a check fails on pull requests into `main` that don't come from `dev`.
+- **`main`** holds released code, and is what the repository page shows. It only changes when
+  `dev` is merged into it for a release.
 
 Both branches are protected: changes go through a pull request, need an approving review from
 the maintainer, and CI must pass (lint, and tests on Linux, Windows and macOS).
 
 ## Making a change
 
-1. Fork the repository and create a branch from `dev`.
+1. Fork the repository and create a branch from `dev` (`git switch -c my-change origin/dev`).
 2. Make your change, with tests. Keep to the layout described in `CLAUDE.md` and the README's
    Development section.
 3. Before pushing, run:
