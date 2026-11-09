@@ -23,6 +23,9 @@ import (
 // connection setup per server.
 const perTestOverhead = 6 * time.Second
 
+// minEvery is the shortest interval allowed for -every.
+const minEvery = 10 * time.Minute
+
 func main() {
 	// net/http reports harmless protocol oddities from servers (such as
 	// "Unsolicited response received on idle HTTP channel") through the
@@ -75,8 +78,10 @@ func run() error {
 	if o.k < 1 || o.parallel < 1 {
 		return errors.New("-k and -parallel must be at least 1")
 	}
-	if o.every != 0 && o.every < time.Minute {
-		return errors.New("-every must be at least 1m")
+	// The servers are mostly run by volunteers: keep repeated tests polite.
+	if o.every != 0 && o.every < minEvery {
+		return fmt.Errorf("-every must be at least %.0f minutes (test servers are run by volunteers)",
+			minEvery.Minutes())
 	}
 	if histErr != nil {
 		histPath = "" // no history, but the test still runs

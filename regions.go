@@ -55,7 +55,7 @@ var DefaultRegions = []string{
 	"losangeles", "singapore", "tokyo", "mumbai", "sydney",
 }
 
-// ParseRegions turns "local,frankfurt,Home=31.77,35.21" into regions.
+// ParseRegions turns "local,frankfurt,Lisbon=38.72,-9.14" into regions.
 // Each item is "local", a preset name, or "Name=lat,lon".
 func ParseRegions(spec string) ([]Region, error) {
 	var out []Region

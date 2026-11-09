@@ -13,7 +13,7 @@ func logInto(b *strings.Builder) func(string, ...any) {
 func TestResultLogLayout(t *testing.T) {
 	var b strings.Builder
 	l := newResultLog(3, false, palette{}, logInto(&b))
-	l.add(1, &ServerResult{Region: "Local (nearest)", Sponsor: "NetFiber", PingMs: 6, DownMbps: 916.2, UpMbps: 97.8}, nil)
+	l.add(1, &ServerResult{Region: "Local (nearest)", Sponsor: "FiberNet", PingMs: 6, DownMbps: 916.2, UpMbps: 97.8}, nil)
 	l.add(2, &ServerResult{Region: "Frankfurt", Sponsor: "NTT DATA, Inc.", PingMs: 65, DownMbps: 650.5, UpMbps: 94.5},
 		[]string{"Pingless.com (no data transferred)"})
 	l.add(3, &ServerResult{Region: "Frankfurt", Sponsor: "Dead", Error: "no data transferred"}, nil)
@@ -21,7 +21,7 @@ func TestResultLogLayout(t *testing.T) {
 	want := strings.Join([]string{
 		"         Server                           Ping      Download        Upload  Bloat",
 		"Local (nearest)",
-		"    1/3  NetFiber                         6 ms    916.2 Mbps     97.8 Mbps",
+		"    1/3  FiberNet                         6 ms    916.2 Mbps     97.8 Mbps",
 		"Frankfurt",
 		"         skipped Pingless.com (no data transferred), used a backup",
 		"    2/3  NTT DATA, Inc.                  65 ms    650.5 Mbps     94.5 Mbps",

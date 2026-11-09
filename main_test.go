@@ -58,9 +58,9 @@ func TestRerunCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	o.regions, set["regions"] = "local,Home=31.77,35.21", true // as if picked
+	o.regions, set["regions"] = "local,Lisbon=38.72,-9.14", true // as if picked
 	got := rerunCommand("multispeed", o, set)
-	want := `multispeed -regions local,Home=31.77,35.21 -csv "my results.csv" -k 1 -no-upload`
+	want := `multispeed -regions local,Lisbon=38.72,-9.14 -csv "my results.csv" -k 1 -no-upload`
 	if got != want {
 		t.Errorf("got  %s\nwant %s", got, want)
 	}

@@ -56,4 +56,4 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/DarkCowMoo/multispeedtest
+        - github.com/DarkCowMoo/multispeed

@@ -6,8 +6,8 @@ This simple go based application should be a fairly quick glimpse of how you are
 Goodluck!
 
 
-[![CI](https://github.com/DarkCowMoo/multispeedtest/actions/workflows/ci.yml/badge.svg)](https://github.com/DarkCowMoo/multispeedtest/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/DarkCowMoo/multispeedtest)](https://github.com/DarkCowMoo/multispeedtest/releases/latest)
+[![CI](https://github.com/DarkCowMoo/multispeed/actions/workflows/ci.yml/badge.svg)](https://github.com/DarkCowMoo/multispeed/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/DarkCowMoo/multispeed)](https://github.com/DarkCowMoo/multispeed/releases/latest)
 
 **Test your internet speed to many places at once, not just the nearest server.**
 
@@ -25,7 +25,7 @@ region automatically, tests them, and tells you in one screen:
 ━━ Results ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Region             Ping    Jitter    Download                 Upload  Bloat  vs last  Best server
-  Local (nearest)    6 ms    1.4 ms  750.8 Mbps  ██████████  89.9 Mbps  B         ▲17%  Bezeq International (Petah Ti…
+  Local (nearest)    6 ms    1.4 ms  750.8 Mbps  ██████████  89.9 Mbps  B         ▲17%  Local ISP (Your City)
   Frankfurt         56 ms    0.6 ms  619.8 Mbps  ████████░░  86.6 Mbps  B            ≈  Melbicom (Frankfurt)
   New York         130 ms    0.9 ms   97.4 Mbps  █░░░░░░░░░  90.3 Mbps  B         ▼56%  Surfshark Ltd (New York, NY)
   Tokyo            349 ms  241.6 ms  205.0 Mbps  ███░░░░░░░  71.3 Mbps  A         ▲46%  Contabo (Tokyo)
@@ -39,12 +39,13 @@ region automatically, tests them, and tells you in one screen:
   New York         ✓         ✓                   ✗ 187 ms lag  ~ 82s          ~ 89s
   Tokyo            ✓         ✗ noticeable delay  ✗ 354 ms lag  ✓ 39s          ~ 2m
 ```
-*(real output, shortened; in a terminal everything is colored green, yellow or red)*
+*(real output, shortened, with the local server renamed; in a terminal everything is colored
+green, yellow or red)*
 
 ## Quick start
 
 **Windows:** download `multispeed_windows_amd64.exe` from the
-[latest release](https://github.com/DarkCowMoo/multispeedtest/releases/latest) and double-click it.
+[latest release](https://github.com/DarkCowMoo/multispeed/releases/latest) and double-click it.
 It tests your connection plus 9 world hubs (about 5 minutes), and the window stays open at the end
 until you press Enter.
 
@@ -52,14 +53,14 @@ until you press Enter.
 `./multispeed` in a terminal. On macOS, if the file is blocked the first time, run
 `xattr -d com.apple.quarantine multispeed`.
 
-**With Go 1.22+:** `go install github.com/DarkCowMoo/multispeedtest@latest` (installs as `multispeedtest`).
+**With Go 1.22+:** `go install github.com/DarkCowMoo/multispeed@latest` (installs as `multispeed`).
 
 ```sh
 multispeed                       # your connection + 9 world hubs, 1 server each
 multispeed -pick                 # choose regions from a numbered list of all 29
 multispeed -h                    # every option, explained, with examples
 multispeed -regions local,frankfurt,london,newyork
-multispeed -regions "local,Home=31.77,35.21,singapore"   # any place by coordinates
+multispeed -regions "local,Lisbon=38.72,-9.14,singapore"   # any place by coordinates
 multispeed -k 3                  # 3 servers per region: more reliable, 3x longer
 multispeed -route                # also trace the network route to each region
 multispeed -html report.html     # save a report you can share
@@ -127,7 +128,7 @@ Use `-no-save` to skip that, or set `MULTISPEED_HISTORY` to keep the history els
 | **History and monitoring** | | |
 | `-history` | | show past runs with a trend per region, and exit |
 | `-no-save` | off | don't save this run to the history |
-| `-every` | | repeat on a schedule, e.g. `30m` or `2h`, until Ctrl+C |
+| `-every` | | repeat on a schedule, e.g. `30m` or `2h` (at least `10m`), until Ctrl+C |
 
 ## Use it from Claude (or another AI agent)
 
@@ -138,14 +139,14 @@ JSON object and all progress goes to stderr, so the agent gets clean data to exp
 
 ```sh
 # macOS / Linux
-git clone https://github.com/DarkCowMoo/multispeedtest
-mkdir -p ~/.claude/skills && cp -r multispeedtest/skills/multispeed ~/.claude/skills/
+git clone https://github.com/DarkCowMoo/multispeed
+mkdir -p ~/.claude/skills && cp -r multispeed/skills/multispeed ~/.claude/skills/
 ```
 ```powershell
 # Windows (PowerShell)
-git clone https://github.com/DarkCowMoo/multispeedtest
+git clone https://github.com/DarkCowMoo/multispeed
 New-Item -ItemType Directory -Force "$HOME\.claude\skills" | Out-Null
-Copy-Item -Recurse multispeedtest\skills\multispeed "$HOME\.claude\skills\"
+Copy-Item -Recurse multispeed\skills\multispeed "$HOME\.claude\skills\"
 ```
 
 Then just ask Claude things like *"How fast is my internet to Europe and the US?"*,

@@ -6,7 +6,7 @@ import (
 )
 
 func TestParseRegions(t *testing.T) {
-	rs, err := ParseRegions("local, Frankfurt, New York, Home=31.77,35.21,tokyo")
+	rs, err := ParseRegions("local, Frankfurt, New York, Lisbon=38.72,-9.14,tokyo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -16,7 +16,7 @@ func TestParseRegions(t *testing.T) {
 	if !rs[0].Local || rs[1].Name != "Frankfurt" || rs[2].Name != "New York" {
 		t.Errorf("unexpected: %+v", rs[:3])
 	}
-	if rs[3].Name != "Home" || rs[3].Lat != 31.77 || rs[3].Lon != 35.21 {
+	if rs[3].Name != "Lisbon" || rs[3].Lat != 38.72 || rs[3].Lon != -9.14 {
 		t.Errorf("custom region parsed wrong: %+v", rs[3])
 	}
 	if rs[4].Name != "Tokyo" {

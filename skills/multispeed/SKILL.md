@@ -7,15 +7,15 @@ description: Measure the user's internet speed, ping and bufferbloat to many wor
 
 `multispeed` tests the internet connection against public Speedtest.net servers in several
 regions and reports download, upload, ping, jitter, latency under load (bufferbloat grade A+ to F)
-and what each region is good for. Source and releases: https://github.com/DarkCowMoo/multispeedtest
+and what each region is good for. Source and releases: https://github.com/DarkCowMoo/multispeed
 
 ## 1. Make sure it is installed
 
 Check with `multispeed -h` (or `multispeed.exe -h` on Windows). If it is missing, either:
 
-- download the binary for the OS from https://github.com/DarkCowMoo/multispeedtest/releases/latest
+- download the binary for the OS from https://github.com/DarkCowMoo/multispeed/releases/latest
   (Windows: `multispeed_windows_amd64.exe`), or
-- with Go 1.22+: `go install github.com/DarkCowMoo/multispeedtest@latest` (installs as `multispeedtest`).
+- with Go 1.22+: `go install github.com/DarkCowMoo/multispeed@latest` (installs as `multispeed`).
 
 ## 2. Run it for machine-readable results
 

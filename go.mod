@@ -1,4 +1,4 @@
-module github.com/DarkCowMoo/multispeedtest
+module github.com/DarkCowMoo/multispeed
 
 go 1.22
 

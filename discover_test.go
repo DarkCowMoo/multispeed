@@ -57,9 +57,9 @@ func TestSelectCandidates(t *testing.T) {
 }
 
 func TestHaversine(t *testing.T) {
-	// Tel Aviv -> Frankfurt is roughly 2,950 km.
-	d := haversineKm(32.0853, 34.7818, 50.1109, 8.6821)
-	if math.Abs(d-2950) > 60 {
+	// London -> Frankfurt is roughly 640 km.
+	d := haversineKm(51.5072, -0.1276, 50.1109, 8.6821)
+	if math.Abs(d-640) > 20 {
 		t.Errorf("distance = %.0f km", d)
 	}
 }

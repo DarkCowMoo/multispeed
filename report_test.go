@@ -43,7 +43,7 @@ func TestPrintTableNoUpload(t *testing.T) {
 func TestPrintTableLayout(t *testing.T) {
 	sums := []RegionSummary{
 		{Region: "Local (nearest)", OK: 3, Tested: 3, PingMs: 6, JitterMs: 0.5, BestDownMbps: 900,
-			MedDownMbps: 880, BestUpMbps: 97.8, BestServer: "Cellcom Ltd. (Rosh HaAyin)"},
+			MedDownMbps: 880, BestUpMbps: 97.8, BestServer: "Example Net (Springfield)"},
 		{Region: "Tokyo", OK: 0, Tested: 1, Note: "all servers failed"},
 		{Region: "Frankfurt", OK: 2, Tested: 3, PingMs: 65, JitterMs: 0.8, BestDownMbps: 450,
 			MedDownMbps: 400, BestUpMbps: 90, BestServer: "NTT DATA, Inc. (Frankfurt)"},
@@ -57,7 +57,7 @@ func TestPrintTableLayout(t *testing.T) {
 	}
 	want := strings.Join([]string{
 		"  Region            Ping  Jitter    Download              Median     Upload  Bloat  vs last   OK  Best server",
-		"  Local (nearest)   6 ms  0.5 ms  900.0 Mbps  ██████████     880  97.8 Mbps  A          new  3/3  Cellcom Ltd. (Rosh HaAyin)",
+		"  Local (nearest)   6 ms  0.5 ms  900.0 Mbps  ██████████     880  97.8 Mbps  A          new  3/3  Example Net (Springfield)",
 		"  Tokyo  no result (all servers failed)",
 		"  Frankfurt        65 ms  0.8 ms  450.0 Mbps  █████░░░░░     400  90.0 Mbps  -         ▼12%  2/3  NTT DATA, Inc. (Frankfurt)",
 		"",

@@ -80,7 +80,7 @@ func defineFlags(fs *flag.FlagSet, o *options) {
 		"Don't save this run to the history. (Runs are saved by default, so each run can\n"+
 			"show the change since the last one.)")
 	fs.DurationVar(&o.every, "every", 0,
-		"Keep testing on a schedule, e.g. 30m or 2h, until Ctrl+C. Each round is saved to\n"+
+		"Keep testing on a schedule, e.g. 30m or 2h (at least 10m), until Ctrl+C. Each round is saved to\n"+
 			"the history (and the CSV file, if given). Good for catching evening slowdowns.")
 }
 
@@ -117,7 +117,7 @@ Examples:
   multispeed -regions local,frankfurt,newyork   test only these regions
   multispeed -no-upload                         quicker: download only
   multispeed -k 3                               3 servers per region, more reliable
-  multispeed -regions "Home=31.77,35.21"        any place, by latitude,longitude
+  multispeed -regions "Lisbon=38.72,-9.14"        any place, by latitude,longitude
   multispeed -html report.html -route           shareable report, with routes
   multispeed -every 1h -csv log.csv             test every hour until Ctrl+C
   multispeed -history                           trends from past runs
