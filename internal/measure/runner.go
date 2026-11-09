@@ -117,6 +117,18 @@ func testWithFallback(ctx context.Context, j *ServerResult, s Settings,
 	return replaced, used
 }
 
+// record notes a phase whose pings went unanswered and returns the loaded
+// latency in ms, and whether it was measured.
+func (r *ServerResult) record(phase string, l loadedLatency) (float64, bool) {
+	if l.unanswered {
+		r.unanswered = append(r.unanswered, phase)
+	}
+	if !l.measured {
+		return 0, false
+	}
+	return toMs(l.median), true
+}
+
 // testOne measures ping, download and (optionally) upload on one server,
 // reporting each phase and the live speed to setPhase. It returns the number
 // of bytes moved.
@@ -156,9 +168,7 @@ func testOne(ctx context.Context, j *ServerResult, s Settings, setPhase func(str
 	setPhase("download")
 	probe := startProbe(ctx, host)
 	err := srv.DownloadTestContext(ctx)
-	if loaded, ok := probe.finish(); ok {
-		j.LoadedDownMs, j.loadedOK = toMs(loaded), true
-	}
+	j.LoadedDownMs, j.loadedDownOK = j.record("download", probe.finish())
 	if err != nil {
 		j.Error = "download: " + err.Error()
 		return used()
@@ -168,9 +178,7 @@ func testOne(ctx context.Context, j *ServerResult, s Settings, setPhase func(str
 		setPhase("upload")
 		probe = startProbe(ctx, host)
 		err = srv.UploadTestContext(ctx)
-		if loaded, ok := probe.finish(); ok {
-			j.LoadedUpMs, j.loadedOK = toMs(loaded), true
-		}
+		j.LoadedUpMs, j.loadedUpOK = j.record("upload", probe.finish())
 		if err != nil {
 			j.Error = "upload: " + err.Error()
 			return used()

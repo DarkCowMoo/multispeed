@@ -172,7 +172,7 @@ footer { margin-top:40px; color:var(--muted); font-size:13px; }
 <td class="num"><b>{{printf "%.1f" .BestDownMbps}}</b> Mbps</td>
 <td><div class="bar"><div style="width:{{printf "%.0f" (pct .BestDownMbps $.Best)}}%"></div></div></td>
 {{if $.R.Settings.Upload}}<td class="num">{{printf "%.1f" .BestUpMbps}} Mbps</td>{{end}}
-<td><span class="grade {{gradeClass .Grade}}">{{or .Grade "–"}}</span>{{if .Grade}} <span class="dim">+{{printf "%.0f" .BloatMs}} ms</span>{{end}}</td>
+<td><span class="grade {{gradeClass .Grade}}">{{if .Grade}}{{.Grade}}{{else if .BloatNote}}?{{else}}–{{end}}</span>{{if .Grade}} <span class="dim">+{{printf "%.0f" .BloatMs}} ms</span>{{end}}{{with .BloatNote}}<br><span class="dim">{{.}}</span>{{end}}</td>
 <td class="num {{changeClass .ChangePct}}">{{change .ChangePct}}</td>
 <td>{{with index $.Trends .Region}}<svg width="90" height="22" viewBox="0 0 90 22"><polyline points="{{spark . 90 22}}"/></svg>{{end}}</td>
 <td class="dim">{{.BestServer}}</td></tr>

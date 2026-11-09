@@ -155,15 +155,44 @@ func TestEstimate(t *testing.T) {
 }
 
 func TestGradeBloat(t *testing.T) {
-	r := ServerResult{IdleMs: 20, LoadedDownMs: 95, LoadedUpMs: 60, idleOK: true, loadedOK: true}
-	r.gradeBloat()
-	if r.BloatMs != 75 || r.Grade != "C" {
-		t.Errorf("bloat = %v %q, want 75 C", r.BloatMs, r.Grade)
+	both := ServerResult{IdleMs: 20, LoadedDownMs: 95, LoadedUpMs: 60, idleOK: true, loadedDownOK: true, loadedUpOK: true}
+	both.gradeBloat()
+	if both.BloatMs != 75 || both.Grade != "C" || both.BloatNote != "" {
+		t.Errorf("both phases: %v %q %q, want 75 C and no note", both.BloatMs, both.Grade, both.BloatNote)
 	}
-	unmeasured := ServerResult{IdleMs: 20, LoadedDownMs: 95}
-	unmeasured.gradeBloat()
-	if unmeasured.Grade != "" {
-		t.Error("no grade without both measurements")
+
+	noIdle := ServerResult{IdleMs: 20, LoadedDownMs: 95, loadedDownOK: true}
+	noIdle.gradeBloat()
+	if noIdle.Grade != "" {
+		t.Error("no grade without an idle measurement")
+	}
+
+	// The upload pings went unanswered: grade from the download alone, and say so.
+	upLost := ServerResult{IdleMs: 20, LoadedDownMs: 45, idleOK: true, loadedDownOK: true}
+	upLost.record("upload", loadedLatency{unanswered: true})
+	upLost.gradeBloat()
+	if upLost.Grade != "A" || upLost.BloatMs != 25 ||
+		upLost.BloatNote != "upload not measured: the server ignored pings while busy" {
+		t.Errorf("upload lost: %v %q %q", upLost.BloatMs, upLost.Grade, upLost.BloatNote)
+	}
+
+	// Nothing answered under load: no grade (not an F), and a note.
+	allLost := ServerResult{IdleMs: 20, idleOK: true}
+	allLost.record("download", loadedLatency{unanswered: true})
+	allLost.record("upload", loadedLatency{unanswered: true})
+	allLost.gradeBloat()
+	if allLost.Grade != "" || allLost.BloatNote != "not measured: the server ignored pings while busy" {
+		t.Errorf("all lost: %q %q", allLost.Grade, allLost.BloatNote)
+	}
+}
+
+func TestRecord(t *testing.T) {
+	var r ServerResult
+	if ms, ok := r.record("download", loadedLatency{median: 12345 * time.Microsecond, measured: true}); !ok || ms != 12.3 {
+		t.Errorf("record = %v, %v", ms, ok)
+	}
+	if _, ok := r.record("upload", loadedLatency{unanswered: true}); ok || len(r.unanswered) != 1 {
+		t.Errorf("unanswered phase should be noted, got %v", r.unanswered)
 	}
 }
 

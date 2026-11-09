@@ -80,9 +80,15 @@ func (l *resultLog) add(done int, j *measure.ServerResult, replaced []string) {
 	if !l.noUpload {
 		cols = append(cols, PadLeft(fmt.Sprintf("%.1f Mbps", j.UpMbps), speedWidth))
 	}
-	if j.Grade != "" {
-		cols = append(cols, p.Grade(j.Grade, PadRight(j.Grade, 2))+
-			p.Dim(fmt.Sprintf(" +%.0f ms under load", j.BloatMs)))
+	switch {
+	case j.Grade != "":
+		bloat := p.Grade(j.Grade, PadRight(j.Grade, 2)) + p.Dim(fmt.Sprintf(" +%.0f ms under load", j.BloatMs))
+		if j.BloatNote != "" {
+			bloat += p.Dim(" (" + j.BloatNote + ")")
+		}
+		cols = append(cols, bloat)
+	case j.BloatNote != "":
+		cols = append(cols, p.Dim("?  "+j.BloatNote))
 	}
 	l.printf("%s", row(cols...))
 }

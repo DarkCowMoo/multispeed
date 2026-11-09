@@ -35,6 +35,24 @@ func TestResultLogLayout(t *testing.T) {
 	}
 }
 
+func TestResultLogBloatNotes(t *testing.T) {
+	var b strings.Builder
+	l := newResultLog(2, true, Palette{}, logInto(&b))
+	l.add(1, &measure.ServerResult{Region: "R", Sponsor: "Partial", PingMs: 5, DownMbps: 100,
+		Grade: "A", BloatMs: 12, BloatNote: "upload not measured: the server ignored pings while busy"}, nil)
+	l.add(2, &measure.ServerResult{Region: "R", Sponsor: "None", PingMs: 5, DownMbps: 100,
+		BloatNote: "not measured: the server ignored pings while busy"}, nil)
+	out := b.String()
+	for _, want := range []string{
+		"A  +12 ms under load (upload not measured: the server ignored pings while busy)",
+		"?  not measured: the server ignored pings while busy",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in:\n%s", want, out)
+		}
+	}
+}
+
 func TestResultLogNoUpload(t *testing.T) {
 	var b strings.Builder
 	l := newResultLog(1, true, Palette{}, logInto(&b))

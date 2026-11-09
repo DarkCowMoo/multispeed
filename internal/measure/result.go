@@ -51,24 +51,46 @@ type ServerResult struct {
 	LoadedUpMs   float64 `json:"loaded_latency_upload_ms,omitempty"`
 	BloatMs      float64 `json:"bufferbloat_ms,omitempty"`
 	Grade        string  `json:"bufferbloat_grade,omitempty"`
-	Error        string  `json:"error,omitempty"`
+	// BloatNote explains a missing or partial bufferbloat measurement,
+	// e.g. "upload not measured: the server ignored pings while busy".
+	BloatNote string `json:"bufferbloat_note,omitempty"`
+	Error     string `json:"error,omitempty"`
 	// RegionIdx is the index of the result's region in the list that was
 	// passed to Discover.
 	RegionIdx int `json:"-"`
 
-	server   *speedtest.Server
-	idleOK   bool // idle latency was measured (it can be 0 ms on a LAN)
-	loadedOK bool // latency under load was measured
+	server       *speedtest.Server
+	idleOK       bool     // idle latency was measured (it can be 0 ms on a LAN)
+	loadedDownOK bool     // latency during the download was measured
+	loadedUpOK   bool     // latency during the upload was measured
+	unanswered   []string // phases ("download", "upload") whose pings went unanswered
 }
 
-// gradeBloat sets BloatMs and Grade from the idle and loaded latencies.
+// unansweredNote is shown when the server stopped answering pings under load.
+const unansweredNote = "the server ignored pings while busy"
+
+// gradeBloat sets BloatMs and Grade from the idle latency and whichever
+// loaded latencies were measured, and BloatNote when one or both phases
+// could not be measured.
 func (r *ServerResult) gradeBloat() {
-	if !r.idleOK || !r.loadedOK {
-		return
+	loaded, measured := 0.0, false
+	if r.loadedDownOK {
+		loaded, measured = r.LoadedDownMs, true
 	}
-	loaded := max(r.LoadedDownMs, r.LoadedUpMs)
-	r.BloatMs = round1(max(0, loaded-r.IdleMs))
-	r.Grade = BloatGrade(r.BloatMs)
+	if r.loadedUpOK {
+		loaded, measured = max(loaded, r.LoadedUpMs), true
+	}
+	if r.idleOK && measured {
+		r.BloatMs = round1(max(0, loaded-r.IdleMs))
+		r.Grade = BloatGrade(r.BloatMs)
+	}
+	switch {
+	case len(r.unanswered) == 0:
+	case r.Grade == "":
+		r.BloatNote = "not measured: " + unansweredNote
+	default:
+		r.BloatNote = r.unanswered[0] + " not measured: " + unansweredNote
+	}
 }
 
 // BloatGrade grades how much latency rises when the line is busy
