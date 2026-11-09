@@ -7,6 +7,8 @@ All notable changes to multispeed are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-09
+
 ### Added
 
 - Windows files now carry version information (product name and version, shown under
@@ -41,5 +43,6 @@ The first release: test your internet speed to many regions of the world at once
 - **Easy to run:** on Windows, double-click the `.exe`; the window stays open at the end.
   Colors, a live progress line, and the exact command to repeat a run.
 
-[Unreleased]: https://github.com/DarkCowMoo/multispeed/compare/v0.1.0...dev
+[Unreleased]: https://github.com/DarkCowMoo/multispeed/compare/v0.1.1...dev
+[0.1.1]: https://github.com/DarkCowMoo/multispeed/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/DarkCowMoo/multispeed/releases/tag/v0.1.0
