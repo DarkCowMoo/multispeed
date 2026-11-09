@@ -60,6 +60,11 @@ func traceRoute(ctx context.Context, host string) *Route {
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h
 	}
+	// The host comes from the public server list: never let it be read as
+	// a command-line option of tracert/traceroute.
+	if host == "" || strings.HasPrefix(host, "-") || strings.ContainsAny(host, " \t") {
+		return &Route{Error: "unusable server address"}
+	}
 	ctx, cancel := context.WithTimeout(ctx, traceTimeout)
 	defer cancel()
 

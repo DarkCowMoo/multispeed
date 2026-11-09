@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
@@ -49,6 +50,14 @@ func TestParseTrace(t *testing.T) {
 				t.Errorf("biggest jump = %+v, want about +48 ms at hop 5", j)
 			}
 		})
+	}
+}
+
+func TestTraceRouteRejectsOptionLikeHosts(t *testing.T) {
+	for _, host := range []string{"-w 1 evil", "--help", "", "a b:8080"} {
+		if r := traceRoute(context.Background(), host); r.Error != "unusable server address" {
+			t.Errorf("traceRoute(%q) = %+v, want it rejected", host, r)
+		}
 	}
 }
 
