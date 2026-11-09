@@ -12,8 +12,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: stable
       - uses: golangci/golangci-lint-action@v8
@@ -22,14 +22,26 @@ jobs:
 
   test:
     strategy:
+      fail-fast: false # one OS failing should not hide the others' results
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v5
+      # Current Go: binaries from old toolchains (e.g. 1.22) no longer start on current macOS.
+      - uses: actions/setup-go@v6
         with:
-          go-version-file: go.mod
+          go-version: stable
       - run: go vet ./...
       - run: go test -race ./...
       - run: go build -o multispeed .
+
+  # go.mod promises Go 1.22 for "go install"; make sure that still builds and passes.
+  min-go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - run: go test ./...

@@ -11,12 +11,13 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      # Current Go: binaries from old toolchains (e.g. 1.22) no longer start on current macOS.
+      - uses: actions/setup-go@v6
         with:
-          go-version-file: go.mod
+          go-version: stable
       - uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
