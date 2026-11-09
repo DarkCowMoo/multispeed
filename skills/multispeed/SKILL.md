@@ -15,7 +15,7 @@ Check with `multispeed -h` (or `multispeed.exe -h` on Windows). If it is missing
 
 - download the binary for the OS from https://github.com/DarkCowMoo/multispeed/releases/latest
   (Windows: `multispeed_windows_amd64.exe`), or
-- with Go 1.22+: `go install github.com/DarkCowMoo/multispeed@latest` (installs as `multispeed`).
+- with Go 1.26+: `go install github.com/DarkCowMoo/multispeed@latest` (installs as `multispeed`).
 
 ## 2. Run it for machine-readable results
 

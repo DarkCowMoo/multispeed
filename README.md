@@ -53,7 +53,7 @@ until you press Enter.
 `./multispeed` in a terminal. On macOS, if the file is blocked the first time, run
 `xattr -d com.apple.quarantine multispeed`.
 
-**With Go 1.22+:** `go install github.com/DarkCowMoo/multispeed@latest` (installs as `multispeed`).
+**With Go 1.26+:** `go install github.com/DarkCowMoo/multispeed@latest` (installs as `multispeed`).
 
 ```sh
 multispeed                       # your connection + 9 world hubs, 1 server each
@@ -194,28 +194,22 @@ each round prints one JSON object per line (JSON Lines).
 
 ## Development
 
-| File | Contents |
-|---|---|
-| `main.go` | the top-level flow: opening screen, rounds, output |
-| `flags.go` | flags, `-h` help, the re-run command |
-| `regions.go` | preset regions and `-regions` parsing |
-| `picker.go` | the interactive region list shown with `-pick` |
-| `discover.go` | finding and choosing servers for each region (with backups) |
-| `runner.go` | running the tests, retrying failed servers with backups, data used |
-| `client.go` | creating speedtest clients safely in parallel |
-| `latency.go` | idle and loaded latency (bufferbloat) probes |
-| `quality.go` | bufferbloat grades and "good for" verdicts |
-| `report.go` | result types, per-region summary, tables, JSON, CSV |
-| `resultlog.go` | the per-server lines printed while testing |
-| `history.go` | saved runs, "vs last", `-history` trends |
-| `worldmap.go` | the terminal world map |
-| `route.go` | traceroute and its summary |
-| `htmlreport.go` | the `-html` report |
-| `progress.go` | log lines and the live status line on stderr |
-| `ui.go` | colors, opening screen, section titles, bars |
-| `vt_windows.go`, `vt_other.go` | ANSI colors in Windows consoles; keeping a double-clicked window open |
+```
+main.go                 entry point: just calls cli.Main (keeps `go install …/multispeed@latest`)
+internal/
+  cli/       flags and -h help, the -pick region list, the flow of a run, the re-run command
+  measure/   speedtest clients, finding servers per region (with backups), running the tests,
+             latency under load (bufferbloat), traceroute
+  results/   per-region summaries, "good for" verdicts, history, the -json report, CSV
+  ui/        colors, opening screen, live status line, tables, world map, HTML report,
+             Windows console handling
+  regions/   preset regions and -regions parsing
+skills/multispeed/   the Claude Code skill
+```
 
-Each file has a matching `_test.go`. Before sending changes, run:
+Dependencies only point one way: `cli → ui → results → measure → regions`. `measure` does no
+output of its own: it reports progress through the `measure.Observer` interface, which `ui`
+implements. Each file has a matching `_test.go`. Before sending changes, run:
 
 ```sh
 gofmt -l .                 # must print nothing
