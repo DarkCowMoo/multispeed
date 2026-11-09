@@ -17,7 +17,9 @@ one way: `cli → ui → results → measure → regions`.
 
 ## Branches
 
-- `dev` is the default branch: all work and all pull requests go there.
+- All work and all pull requests go to `dev`. `main` is the default branch (the repository page
+  shows released code), so branch from `origin/dev` and open pull requests with `--base dev`; CI
+  fails pull requests into `main` that don't come from `dev`.
 - `main` holds released code. It is updated only by a pull request from `dev`, and release
   tags (`vX.Y.Z`) are made on `main`; `.github/workflows/release.yml` runs GoReleaser.
 - User-facing changes get a line under **Unreleased** in `CHANGELOG.md`.

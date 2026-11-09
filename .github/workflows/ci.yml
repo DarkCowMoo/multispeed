@@ -9,6 +9,25 @@ permissions:
   contents: read
 
 jobs:
+  # main is the default branch, so GitHub suggests it as the base of new pull
+  # requests; only dev (a release) may be merged into main.
+  pr-base:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pull requests into main come from dev
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$BASE" = main ] && { [ "$HEAD" != dev ] || [ "$HEAD_REPO" != "$REPO" ]; }; then
+            echo "::error::Pull requests go to dev, not main. Edit this pull request and change its base branch to dev."
+            exit 1
+          fi
+          echo "Base $BASE, head $HEAD_REPO:$HEAD: OK"
+
   lint:
     runs-on: ubuntu-latest
     steps:
