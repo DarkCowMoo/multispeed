@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/showwin/speedtest-go/speedtest"
@@ -48,6 +49,12 @@ type regionPick struct {
 func discover(ctx context.Context, regions []Region, o options) discovery {
 	picks := make([]regionPick, len(regions))
 	var wg sync.WaitGroup
+	var looked atomic.Int32
+	started := time.Now()
+	stopStatus := con.show(func() string {
+		return fmt.Sprintf("Finding servers... %d/%d regions | %s elapsed",
+			looked.Load(), len(regions), fmtDur(time.Since(started)))
+	})
 	sem := make(chan struct{}, lookupConcurrency)
 	for i, r := range regions {
 		wg.Add(1)
@@ -56,9 +63,11 @@ func discover(ctx context.Context, regions []Region, o options) discovery {
 			sem <- struct{}{}
 			defer func() { <-sem }()
 			picks[i] = discoverRegion(ctx, i, r, o)
+			looked.Add(1)
 		}(i, r)
 	}
 	wg.Wait()
+	stopStatus()
 
 	d := discovery{
 		backups: make(map[int][]*ServerResult, len(regions)),
@@ -69,7 +78,8 @@ func discover(ctx context.Context, regions []Region, o options) discovery {
 		d.backups[i] = p.backups
 		d.notes[i] = p.note
 		if p.note != "" && len(p.jobs) == 0 {
-			logf("  %-16s skipped: %s\n", regions[i].Name, p.note)
+			logf("  %s %s\n", errColors.bold(padRight(regions[i].Name, regionCol)),
+				errColors.bad("skipped: "+p.note))
 		}
 	}
 	return d
@@ -117,7 +127,9 @@ func discoverRegion(ctx context.Context, idx int, r Region, o options) regionPic
 			p.backups = append(p.backups, res)
 		}
 	}
-	logf("  %-16s %d server(s) + %d backup: %s\n", r.Name, len(p.jobs), len(p.backups), serverNames(p.jobs))
+	ec := errColors
+	logf("  %s %s %s\n", ec.bold(padRight(r.Name, regionCol)), serverNames(p.jobs),
+		ec.dim(fmt.Sprintf("(+%d backup)", len(p.backups))))
 	return p
 }
 

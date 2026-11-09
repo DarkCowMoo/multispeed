@@ -2,3 +2,4 @@ multispeed
 multispeed.exe
 dist/
 *.csv
+*.exe~

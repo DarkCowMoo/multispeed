@@ -20,13 +20,29 @@ Tokyo                208     3.1       96.4      90.0    40.3   2/3  IPA (Tokyo)
 
 Download the file for your system from the releases, then run it in a terminal:
 
+On Windows you can simply **double-click `multispeed.exe`**: it tests your connection plus 9 world
+hubs, and the window stays open at the end until you press Enter.
+
 ```sh
-./multispeed                     # local + 9 world hubs, 3 servers each, one at a time
+./multispeed                     # your connection + 9 world hubs, 3 servers each
+./multispeed -pick               # choose regions from a numbered list of all 29
+./multispeed -h                  # every option, explained, with examples
 ./multispeed -parallel 3         # test 3 servers at once (faster)
 ./multispeed -regions local,frankfurt,london,newyork -k 2
 ./multispeed -regions "local,Home=31.77,35.21,singapore"   # any place by coordinates
 ./multispeed -list-regions       # show the built-in region names
 ```
+
+With `-pick`, it lists every region (your local servers plus 28 world hubs) and asks which to
+test: type numbers or names, `all`, or press Enter for the default set (local + 9 hubs).
+
+It opens with your internet provider and the plan (regions, servers, estimated time). While it
+runs, a live line shows the current server, what it is doing (ping, download or upload, with the
+speed so far), and the time elapsed and left. Results are colored: ping and speed are green, yellow
+or red, and each region gets a bar comparing its download with your best region. At the end it
+shows the data used and prints the exact command to run the same test again, for example
+`.\multispeed.exe -regions local,frankfurt,tokyo -k 1`. Use `-no-color` (or set `NO_COLOR`) for
+plain text.
 
 On Windows, use `multispeed.exe`. On macOS, if the file is blocked the first time, run
 `xattr -d com.apple.quarantine multispeed`.
@@ -43,16 +59,21 @@ On Windows, use `multispeed.exe`. On macOS, if the file is blocked the first tim
 
 ## Options
 
+`multispeed -h` shows the same explanations.
+
 | Flag | Default | Meaning |
 |---|---|---|
 | `-regions` | local + 9 hubs | `local`, preset names, or `Name=lat,lon`, comma separated |
-| `-k` | 3 | servers tested per region |
-| `-parallel` | 1 | servers tested at the same time |
+| `-pick` | off | choose the regions from a numbered list |
+| `-list-regions` | | show the preset region names and exit |
+| `-k` | 3 | servers tested per region; the table shows the best and the median |
+| `-parallel` | 1 | servers tested at the same time (faster, but they share your bandwidth) |
 | `-duration` | 10s | length of each download / upload measurement |
 | `-max-distance` | 1000 | max km between a server and its region's center |
 | `-no-upload` | off | skip upload (about twice as fast) |
 | `-json` | off | full results as JSON on stdout |
 | `-csv file` | | also save per-server results (handy for tracking over time) |
+| `-no-color` | off | plain text without colors |
 
 ## Reading the results
 
@@ -86,11 +107,16 @@ Cross-compile, for example for Windows: `GOOS=windows GOARCH=amd64 go build -o m
 
 | File | Contents |
 |---|---|
-| `main.go` | flags and the top-level `run` flow |
+| `main.go` | flags, `-h` help, the top-level `run` flow, the re-run command |
 | `regions.go` | preset regions and `-regions` parsing |
+| `picker.go` | the interactive region list shown with `-pick` |
+| `progress.go` | log lines and the live status line on stderr |
 | `discover.go` | finding and choosing servers for each region (with backups) |
-| `runner.go` | running the tests, retrying failed servers with backups |
-| `report.go` | result types, per-region summary, table / JSON / CSV output |
+| `runner.go` | running the tests, retrying failed servers with backups, data used |
+| `resultlog.go` | the per-server lines printed while testing |
+| `report.go` | result types, per-region summary, results table / JSON / CSV |
+| `ui.go` | colors, opening screen, section titles, bars |
+| `vt_windows.go`, `vt_other.go` | ANSI colors in Windows consoles; keeping a double-clicked window open |
 
 Each file has a matching `_test.go`. Before sending changes, run:
 

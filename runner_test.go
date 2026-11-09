@@ -69,7 +69,10 @@ func TestEndToEndAgainstFakeServers(t *testing.T) {
 		job("B", "fakeB", 1, srvB),
 	}
 	o := options{k: 2, parallel: 3, duration: 2 * time.Second}
-	res := runTests(context.Background(), jobs, nil, o)
+	res, stats := runTests(context.Background(), jobs, nil, o)
+	if stats.dataBytes <= 0 {
+		t.Errorf("data used = %d, want > 0", stats.dataBytes)
+	}
 	for _, r := range res {
 		if r.Error != "" {
 			t.Fatalf("%s: %s", r.Sponsor, r.Error)
@@ -95,7 +98,7 @@ func TestFailedServerFallsBackToBackup(t *testing.T) {
 	backups := map[int][]*ServerResult{0: {job("A", "good", 0, fakeSpeedtestServer(t))}}
 	o := options{k: 1, parallel: 1, duration: time.Second, noUpload: true}
 
-	res := runTests(context.Background(), jobs, backups, o)
+	res, _ := runTests(context.Background(), jobs, backups, o)
 	if res[0].Error != "" || res[0].Sponsor != "good" || res[0].DownMbps <= 0 {
 		t.Fatalf("expected fallback to the good server, got %+v", *res[0])
 	}
@@ -108,7 +111,7 @@ func TestFailedServerWithoutBackupKeepsError(t *testing.T) {
 	jobs := []*ServerResult{job("A", "dead", 0, deadSpeedtestServer(t))}
 	o := options{k: 1, parallel: 1, duration: time.Second, noUpload: true}
 
-	res := runTests(context.Background(), jobs, nil, o)
+	res, _ := runTests(context.Background(), jobs, nil, o)
 	if res[0].Error == "" {
 		t.Fatalf("expected an error, got %+v", *res[0])
 	}

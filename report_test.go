@@ -32,11 +32,35 @@ func TestAggregateAllFailed(t *testing.T) {
 func TestPrintTableNoUpload(t *testing.T) {
 	sums := []RegionSummary{{Region: "R", OK: 1, Tested: 1, PingMs: 5, BestDownMbps: 100, BestServer: "S (C)"}}
 	var b strings.Builder
-	if err := printTable(&b, sums, true); err != nil {
+	if err := printTable(&b, sums, true, palette{}); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(b.String(), "-  1/1") {
-		t.Errorf("upload should be shown as '-' with -no-upload:\n%s", b.String())
+	if strings.Contains(b.String(), "Upload") || strings.Contains(b.String(), " 0.0 Mbps") {
+		t.Errorf("no upload column expected with -no-upload:\n%s", b.String())
+	}
+}
+
+func TestPrintTableLayout(t *testing.T) {
+	sums := []RegionSummary{
+		{Region: "Local (nearest)", OK: 3, Tested: 3, PingMs: 6, JitterMs: 0.5, BestDownMbps: 900,
+			MedDownMbps: 880, BestUpMbps: 97.8, BestServer: "Cellcom Ltd. (Rosh HaAyin)"},
+		{Region: "Tokyo", OK: 0, Tested: 1, Note: "all servers failed"},
+		{Region: "Frankfurt", OK: 2, Tested: 3, PingMs: 65, JitterMs: 0.8, BestDownMbps: 450,
+			MedDownMbps: 400, BestUpMbps: 90, BestServer: "NTT DATA, Inc. (Frankfurt)"},
+	}
+	var b strings.Builder
+	if err := printTable(&b, sums, false, palette{}); err != nil {
+		t.Fatal(err)
+	}
+	want := strings.Join([]string{
+		"  Region              Ping  Jitter     Download                Median       Upload   OK  Best server",
+		"  Local (nearest)     6 ms  0.5 ms   900.0 Mbps  ████████████     880    97.8 Mbps  3/3  Cellcom Ltd. (Rosh HaAyin)",
+		"  Tokyo             no result (all servers failed)",
+		"  Frankfurt          65 ms  0.8 ms   450.0 Mbps  ██████░░░░░░     400    90.0 Mbps  2/3  NTT DATA, Inc. (Frankfurt)",
+		"",
+	}, "\n")
+	if b.String() != want {
+		t.Errorf("got:\n%s\nwant:\n%s", b.String(), want)
 	}
 }
 

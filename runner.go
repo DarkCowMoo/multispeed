@@ -2,20 +2,33 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/showwin/speedtest-go/speedtest"
 )
 
+// runStats describes a whole test run.
+type runStats struct {
+	dataBytes int64         // bytes downloaded and uploaded
+	elapsed   time.Duration // wall time of the tests
+}
+
 // runTests runs every job, o.parallel at a time. When a server fails, the job
 // retries with the next unused backup server of the same region (backups may be nil).
-func runTests(ctx context.Context, jobs []*ServerResult, backups map[int][]*ServerResult, o options) []*ServerResult {
+func runTests(ctx context.Context, jobs []*ServerResult, backups map[int][]*ServerResult, o options) ([]*ServerResult, runStats) {
 	queue := make(chan *ServerResult)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	done := 0
+	var data atomic.Int64
+	started := time.Now()
+	prog := newTracker(len(jobs), o)
+	log := newResultLog(len(jobs), o.noUpload, errColors, logf)
+	stopStatus := con.show(prog.status)
+	defer stopStatus()
 
 	nextBackup := func(region int) *ServerResult {
 		mu.Lock()
@@ -33,11 +46,10 @@ func runTests(ctx context.Context, jobs []*ServerResult, backups map[int][]*Serv
 		go func() {
 			defer wg.Done()
 			for j := range queue {
-				testWithFallback(ctx, j, o, nextBackup)
-				mu.Lock()
-				done++
-				logProgress(done, len(jobs), j, o.noUpload)
-				mu.Unlock()
+				a := prog.begin(j.Region, j.Sponsor)
+				failed, used := testWithFallback(ctx, j, o, nextBackup, prog, a)
+				data.Add(used)
+				log.add(prog.end(a), j, failed)
 			}
 		}()
 	}
@@ -49,69 +61,79 @@ func runTests(ctx context.Context, jobs []*ServerResult, backups map[int][]*Serv
 	}
 	close(queue)
 	wg.Wait()
-	return jobs
+	return jobs, runStats{dataBytes: data.Load(), elapsed: time.Since(started)}
 }
 
 // testWithFallback tests j and, while it fails, replaces it with backups.
-func testWithFallback(ctx context.Context, j *ServerResult, o options, nextBackup func(int) *ServerResult) {
-	testOne(ctx, j, o)
+// Progress is reported to prog under the entry a. It returns a description
+// of each server that failed and was replaced, and the bytes moved.
+func testWithFallback(ctx context.Context, j *ServerResult, o options,
+	nextBackup func(int) *ServerResult, prog *tracker, a *activeTest,
+) (failed []string, used int64) {
+	// Each attempt gets its own callback with the server name fixed, so a late
+	// callback from a previous attempt never reads data being overwritten.
+	phaseFor := func(server string) func(string) {
+		return func(phase string) { prog.update(a, server, phase) }
+	}
+	used = testOne(ctx, j, o, phaseFor(j.Sponsor))
 	for j.Error != "" && ctx.Err() == nil {
 		b := nextBackup(j.regionIdx)
 		if b == nil {
-			return
+			break
 		}
-		logf("  %-16s %s failed (%s), trying %s\n", j.Region, trunc(j.Sponsor, 28), j.Error, trunc(b.Sponsor, 28))
+		failed = append(failed, fmt.Sprintf("%s (%s)", trunc(j.Sponsor, serverWidth), j.Error))
 		*j = *b
-		testOne(ctx, j, o)
+		used += testOne(ctx, j, o, phaseFor(j.Sponsor))
 	}
+	return failed, used
 }
 
-func logProgress(done, total int, j *ServerResult, noUpload bool) {
-	switch {
-	case j.Error != "":
-		logf("  [%d/%d] %-16s %-28s error: %s\n", done, total, j.Region, trunc(j.Sponsor, 28), j.Error)
-	case noUpload:
-		logf("  [%d/%d] %-16s %-28s ping %4.0f ms  down %7.1f Mbps\n",
-			done, total, j.Region, trunc(j.Sponsor, 28), j.PingMs, j.DownMbps)
-	default:
-		logf("  [%d/%d] %-16s %-28s ping %4.0f ms  down %7.1f  up %7.1f Mbps\n",
-			done, total, j.Region, trunc(j.Sponsor, 28), j.PingMs, j.DownMbps, j.UpMbps)
-	}
-}
-
-// testOne measures ping, download and (optionally) upload on one server.
-func testOne(ctx context.Context, j *ServerResult, o options) {
+// testOne measures ping, download and (optionally) upload on one server,
+// reporting each phase and the live speed to setPhase. It returns the number
+// of bytes moved.
+func testOne(ctx context.Context, j *ServerResult, o options, setPhase func(string)) int64 {
 	if ctx.Err() != nil {
 		j.Error = "canceled"
-		return
+		return 0
 	}
 	// Each test gets its own client so parallel tests don't share counters.
 	client := speedtest.New()
+	used := func() int64 { return client.GetTotalDownload() + client.GetTotalUpload() }
 	client.SetCaptureTime(o.duration)
+	client.SetCallbackDownload(func(r speedtest.ByteRate) {
+		setPhase(fmt.Sprintf("download %.0f Mbps", r.Mbps()))
+	})
+	client.SetCallbackUpload(func(r speedtest.ByteRate) {
+		setPhase(fmt.Sprintf("upload %.0f Mbps", r.Mbps()))
+	})
 	s := j.server
 	s.Context = client
 
+	setPhase("ping")
 	if err := s.PingTestContext(ctx, nil); err != nil {
 		j.Error = "ping: " + err.Error()
-		return
+		return used()
 	}
 	j.PingMs = toMs(s.Latency)
 	j.JitterMs = toMs(s.Jitter)
+	setPhase("download")
 	if err := s.DownloadTestContext(ctx); err != nil {
 		j.Error = "download: " + err.Error()
-		return
+		return used()
 	}
 	j.DownMbps = toMbps(s.DLSpeed)
 	if !o.noUpload {
+		setPhase("upload")
 		if err := s.UploadTestContext(ctx); err != nil {
 			j.Error = "upload: " + err.Error()
-			return
+			return used()
 		}
 		j.UpMbps = toMbps(s.ULSpeed)
 	}
 	if j.DownMbps <= 0 && (o.noUpload || j.UpMbps <= 0) {
 		j.Error = "no data transferred"
 	}
+	return used()
 }
 
 // toMbps converts a byte rate to Mbps, rounded to 0.1.
