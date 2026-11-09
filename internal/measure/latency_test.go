@@ -45,15 +45,15 @@ func TestLatencyProbeAgainstLocalServer(t *testing.T) {
 	}
 	p := startProbe(ctx, host)
 	time.Sleep(3 * probeEvery)
-	loaded, ok := p.finish()
+	l := p.finish()
 	// Loopback can measure as 0; what matters is that samples were taken
 	// and none timed out.
-	if !ok || loaded >= probeTimeout {
-		t.Errorf("loaded latency = %v, %v", loaded, ok)
+	if !l.measured || l.unanswered || l.median >= probeTimeout {
+		t.Errorf("loaded latency = %+v", l)
 	}
 }
 
-// A host that does not answer counts as the worst case, not as "no data".
+// A server that stops answering gives "unanswered", not a 2-second ping.
 func TestLatencyProbeUnreachable(t *testing.T) {
 	if testing.Short() {
 		t.Skip("slow")
@@ -63,5 +63,38 @@ func TestLatencyProbeUnreachable(t *testing.T) {
 	srv.Close() // nothing listens there now
 	if _, ok := tcpPing(context.Background(), host); ok {
 		t.Fatal("ping to a closed port should fail")
+	}
+	p := startProbe(context.Background(), host)
+	time.Sleep(3 * probeEvery)
+	if l := p.finish(); l.measured || !l.unanswered {
+		t.Errorf("probe of a dead server = %+v, want unanswered", l)
+	}
+}
+
+func TestSummarizeProbes(t *testing.T) {
+	ms := func(n int) time.Duration { return time.Duration(n) * time.Millisecond }
+	tests := []struct {
+		name       string
+		answered   []time.Duration
+		lost       int
+		want       time.Duration
+		measured   bool
+		unanswered bool
+	}{
+		{"nothing", nil, 0, 0, false, false},
+		{"all answered", []time.Duration{ms(10), ms(30), ms(20)}, 0, ms(20), true, false},
+		// A few lost pings are real congestion: they count as the worst case.
+		{"some lost", []time.Duration{ms(10), ms(20), ms(30)}, 2, ms(30), true, false},
+		{"half lost", []time.Duration{ms(10), ms(20)}, 2, (ms(20) + probeTimeout) / 2, true, false},
+		// Mostly lost: the server ignores us; nothing is measured.
+		{"mostly lost", []time.Duration{ms(10)}, 3, 0, false, true},
+		{"all lost", nil, 5, 0, false, true},
+	}
+	for _, tt := range tests {
+		l := summarizeProbes(tt.answered, tt.lost)
+		if l.median != tt.want || l.measured != tt.measured || l.unanswered != tt.unanswered {
+			t.Errorf("%s: got %+v, want median=%v measured=%v unanswered=%v",
+				tt.name, l, tt.want, tt.measured, tt.unanswered)
+		}
 	}
 }

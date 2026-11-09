@@ -94,7 +94,7 @@ func PrintTable(w io.Writer, sums []results.RegionSummary, noUpload bool, p Pale
 		best = max(best, s.BestDownMbps)
 		multi = multi || s.Tested > 1
 		history = history || s.PrevDownMbps > 0
-		graded = graded || s.Grade != ""
+		graded = graded || s.Grade != "" || s.BloatNote != ""
 	}
 	type row = *results.RegionSummary
 	plain := func(s string) (string, func(string) string) { return s, nil }
@@ -129,7 +129,10 @@ func PrintTable(w io.Writer, sums []results.RegionSummary, noUpload bool, p Pale
 	if graded {
 		cols = append(cols, column[row]{head: "Bloat", cell: func(s row) (string, func(string) string) {
 			g := s.Grade
-			if g == "" {
+			switch {
+			case g == "" && s.BloatNote != "":
+				return "?", p.Dim // could not be measured; see the note below the table
+			case g == "":
 				return "-", p.Dim
 			}
 			return g, func(t string) string { return p.Grade(g, t) }
@@ -165,6 +168,16 @@ func PrintTable(w io.Writer, sums []results.RegionSummary, noUpload bool, p Pale
 	}
 	_, err := io.WriteString(w, renderTable(p, cols, rows, failed))
 	return err
+}
+
+// PrintBloatNotes lists the regions whose bufferbloat could not be (fully)
+// measured, and why. It prints nothing when every region was measured.
+func PrintBloatNotes(w io.Writer, sums []results.RegionSummary, p Palette) {
+	for i := range sums {
+		if n := sums[i].BloatNote; n != "" {
+			fmt.Fprintf(w, "  %s\n", p.Dim(fmt.Sprintf("Bloat %s: %s.", sums[i].Region, n)))
+		}
+	}
 }
 
 // changeText describes the change in download since the last run.

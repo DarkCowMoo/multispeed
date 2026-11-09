@@ -308,6 +308,7 @@ func printResults(w io.Writer, r *results.Report, o options, saved bool) error {
 	if anyGraded(r.Regions) {
 		fmt.Fprintf(w, "\n  %s\n", oc.Dim("Bloat = how much ping rises while your line is busy. "+
 			"A+/A: smooth calls and games even during downloads; D/F: lag spikes."))
+		ui.PrintBloatNotes(w, r.Regions, oc)
 	}
 
 	if !o.noMap {
@@ -331,7 +332,7 @@ func printResults(w io.Writer, r *results.Report, o options, saved bool) error {
 
 func anyGraded(sums []results.RegionSummary) bool {
 	for i := range sums {
-		if sums[i].Grade != "" {
+		if sums[i].Grade != "" || sums[i].BloatNote != "" {
 			return true
 		}
 	}
