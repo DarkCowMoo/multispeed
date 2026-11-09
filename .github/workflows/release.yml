@@ -15,7 +15,7 @@ jobs:
         with:
           fetch-depth: 0
       # Current Go: binaries from old toolchains (e.g. 1.22) no longer start on current macOS.
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version: stable
       - uses: goreleaser/goreleaser-action@v6
