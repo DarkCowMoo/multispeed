@@ -24,7 +24,10 @@ the maintainer, and CI must pass (lint, and tests on Linux, Windows and macOS).
    go test ./...
    ```
 
-4. Open a pull request against `dev` and describe what changes for people using multispeed.
+4. If the change matters to people using multispeed, add a line under **Unreleased** in
+   [CHANGELOG.md](CHANGELOG.md) (in *Added*, *Changed*, *Fixed* or *Removed*), written for
+   users rather than developers.
+5. Open a pull request against `dev` and describe what changes for people using multispeed.
 
 ## Please don't
 
