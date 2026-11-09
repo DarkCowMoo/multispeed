@@ -44,12 +44,26 @@ func idleLatency(ctx context.Context, host string) (time.Duration, bool) {
 	return medianDuration(samples)
 }
 
+// maxUnansweredShare is the share of pings under load that may go unanswered
+// before the measurement is discarded. A few lost pings mean real congestion
+// and count as the worst case; mostly lost pings more likely mean the server
+// refuses new connections while it is busy, which says nothing about your line.
+const maxUnansweredShare = 0.5
+
+// loadedLatency is what a probe measured while the line was busy.
+type loadedLatency struct {
+	median     time.Duration
+	measured   bool // enough pings were answered to trust the median
+	unanswered bool // most pings went unanswered, so nothing was measured
+}
+
 // latencyProbe pings a host in the background while a download or upload runs.
 type latencyProbe struct {
-	mu      sync.Mutex
-	samples []time.Duration
-	cancel  context.CancelFunc
-	done    chan struct{}
+	mu       sync.Mutex
+	answered []time.Duration
+	lost     int
+	cancel   context.CancelFunc
+	done     chan struct{}
 }
 
 func startProbe(ctx context.Context, host string) *latencyProbe {
@@ -68,11 +82,12 @@ func startProbe(ctx context.Context, host string) *latencyProbe {
 				if ctx.Err() != nil {
 					return // canceled mid-sample: not a real measurement
 				}
-				if !ok {
-					rtt = probeTimeout // no answer under load is the worst case
-				}
 				p.mu.Lock()
-				p.samples = append(p.samples, rtt)
+				if ok {
+					p.answered = append(p.answered, rtt)
+				} else {
+					p.lost++
+				}
 				p.mu.Unlock()
 			}
 		}
@@ -80,13 +95,32 @@ func startProbe(ctx context.Context, host string) *latencyProbe {
 	return p
 }
 
-// finish stops the probe and returns the median latency under load.
-func (p *latencyProbe) finish() (time.Duration, bool) {
+// finish stops the probe and returns the latency under load.
+func (p *latencyProbe) finish() loadedLatency {
 	p.cancel()
 	<-p.done
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return medianDuration(p.samples)
+	return summarizeProbes(p.answered, p.lost)
+}
+
+// summarizeProbes turns answered pings and the number of lost ones into a
+// measurement. Lost pings count as the worst case (probeTimeout), unless so
+// many were lost that the server, not the line, is the likely cause.
+func summarizeProbes(answered []time.Duration, lost int) loadedLatency {
+	total := len(answered) + lost
+	if total == 0 {
+		return loadedLatency{}
+	}
+	if float64(lost)/float64(total) > maxUnansweredShare {
+		return loadedLatency{unanswered: true}
+	}
+	all := append([]time.Duration(nil), answered...)
+	for i := 0; i < lost; i++ {
+		all = append(all, probeTimeout)
+	}
+	m, ok := medianDuration(all)
+	return loadedLatency{median: m, measured: ok}
 }
 
 func medianDuration(v []time.Duration) (time.Duration, bool) {

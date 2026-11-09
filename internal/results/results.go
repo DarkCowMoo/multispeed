@@ -35,6 +35,7 @@ type RegionSummary struct {
 	BestUpMbps   float64                `json:"best_upload_mbps"`
 	BloatMs      float64                `json:"bufferbloat_ms,omitempty"`
 	Grade        string                 `json:"bufferbloat_grade,omitempty"`
+	BloatNote    string                 `json:"bufferbloat_note,omitempty"`
 	GoodFor      []Verdict              `json:"good_for,omitempty"`
 	PrevDownMbps float64                `json:"previous_download_mbps,omitempty"`
 	ChangePct    *float64               `json:"download_change_pct,omitempty"`
@@ -97,7 +98,7 @@ func aggregate(s *RegionSummary) {
 		if r.DownMbps > s.BestDownMbps || s.BestServer == "" {
 			s.BestDownMbps = r.DownMbps
 			s.BestServer = fmt.Sprintf("%s (%s)", r.Sponsor, r.City)
-			s.BloatMs, s.Grade = r.BloatMs, r.Grade
+			s.BloatMs, s.Grade, s.BloatNote = r.BloatMs, r.Grade, r.BloatNote
 			s.BestHost = r.Host
 		}
 		if r.UpMbps > s.BestUpMbps {

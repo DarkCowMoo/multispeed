@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -58,6 +59,27 @@ func TestPrintTableHidesEmptyColumns(t *testing.T) {
 		if strings.Contains(b.String(), col) {
 			t.Errorf("column %q should be hidden:\n%s", col, b.String())
 		}
+	}
+}
+
+func TestPrintTableUnmeasuredBloat(t *testing.T) {
+	note := "not measured: the server ignored pings while busy"
+	sums := []results.RegionSummary{
+		{Region: "Tokyo", OK: 1, Tested: 1, PingMs: 250, BestDownMbps: 150, BloatNote: note},
+		{Region: "Frankfurt", OK: 1, Tested: 1, PingMs: 60, BestDownMbps: 500, Grade: "B", BloatMs: 48},
+	}
+	var b strings.Builder
+	if err := PrintTable(&b, sums, true, Palette{}); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(b.String(), "\n")
+	if len(lines) < 3 || !slices.Contains(strings.Fields(lines[1]), "?") || strings.Contains(lines[1], " F") {
+		t.Errorf("an unmeasured region should show ? in the Bloat column:\n%s", b.String())
+	}
+	b.Reset()
+	PrintBloatNotes(&b, sums, Palette{})
+	if b.String() != "  Bloat Tokyo: "+note+".\n" {
+		t.Errorf("notes = %q", b.String())
 	}
 }
 
