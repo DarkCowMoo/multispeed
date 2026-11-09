@@ -166,7 +166,8 @@ func (t *tracker) end(a *activeTest) int {
 }
 
 // status is the live line, e.g.
-// "[2/9] Frankfurt NTT DATA: download 512 Mbps | 1m10s elapsed, ~4m left".
+// "[2/9] Frankfurt NTT DATA: download 512 Mbps | 1m10s elapsed, ~4m left",
+// where 2 is the test in progress.
 func (t *tracker) status() string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -184,7 +185,10 @@ func (t *tracker) status() string {
 		timing += ", ~" + fmtDur(left) + " left"
 	}
 	parts = append(parts, timing)
-	return fmt.Sprintf("[%d/%d] %s", t.done, t.total, strings.Join(parts, " | "))
+	// Number the test(s) in progress, like the result lines do: while test 2
+	// runs, show 2/10, not the 1 that has finished.
+	current := min(t.done+len(t.active), t.total)
+	return fmt.Sprintf("[%d/%d] %s", current, t.total, strings.Join(parts, " | "))
 }
 
 // timeLeft estimates the remaining time from the pace so far, or from the

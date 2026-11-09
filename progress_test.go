@@ -17,7 +17,7 @@ func TestTrackerStatus(t *testing.T) {
 	now = now.Add(5 * time.Second)
 	got := tr.status()
 	// Before any test finishes, time left comes from the estimate: 3*(10s+5s) - 5s.
-	want := "[0/3] Frankfurt NTT DATA, Inc.: download 512 Mbps | 5s elapsed, ~40s left"
+	want := "[1/3] Frankfurt NTT DATA, Inc.: download 512 Mbps | 5s elapsed, ~40s left"
 	if got != want {
 		t.Errorf("status =\n  %q\nwant\n  %q", got, want)
 	}
@@ -29,6 +29,10 @@ func TestTrackerStatus(t *testing.T) {
 	if got := tr.status(); !strings.HasSuffix(got, "20s elapsed, ~40s left") {
 		t.Errorf("status after one test = %q", got)
 	}
+	tr.begin("Tokyo", "Contabo") // the second test is now running
+	if got := tr.status(); !strings.HasPrefix(got, "[2/3] Tokyo Contabo") {
+		t.Errorf("second test should be numbered 2/3, got %q", got)
+	}
 }
 
 func TestTrackerParallelShowsEachRegion(t *testing.T) {
@@ -36,7 +40,7 @@ func TestTrackerParallelShowsEachRegion(t *testing.T) {
 	tr.begin("Frankfurt", "A")
 	tr.begin("Tokyo", "B")
 	got := tr.status()
-	if !strings.Contains(got, "Frankfurt: starting | Tokyo: starting") {
+	if !strings.HasPrefix(got, "[2/4] Frankfurt: starting | Tokyo: starting") {
 		t.Errorf("status = %q", got)
 	}
 }
