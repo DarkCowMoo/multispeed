@@ -1,11 +1,19 @@
 name: Release
 
+# A release happens when main has a VERSION with no matching tag yet (the
+# usual way: scripts/release.sh), or when a vX.Y.Z tag is pushed by hand.
 on:
   push:
+    branches: [main]
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -14,15 +22,50 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - name: Decide the version
+        id: v
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="$(tr -d '[:space:]' < VERSION)"
+            if git rev-parse -q --verify "refs/tags/v$version" > /dev/null; then
+              echo "v$version is already released; nothing to do."
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Version '$version' is not X.Y.Z"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      # The release page shows this version's section of CHANGELOG.md. It is
+      # checked before tagging, so no release (or tag) goes out without notes.
+      - name: Release notes from CHANGELOG.md
+        if: steps.v.outputs.skip != 'true'
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: sh scripts/release-notes.sh "$VERSION" > "$RUNNER_TEMP/release-notes.md"
+
+      - name: Tag the release
+        if: steps.v.outputs.skip != 'true' && github.ref_type == 'branch'
+        env:
+          VERSION: ${{ steps.v.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "multispeed v$VERSION"
+          git push origin "v$VERSION"
+
       # Current Go: binaries from old toolchains (e.g. 1.22) no longer start on current macOS.
       - uses: actions/setup-go@v7
+        if: steps.v.outputs.skip != 'true'
         with:
           go-version: stable
-      # The release page shows this version's section of CHANGELOG.md. The step
-      # fails if the tag has no section there, so no release goes out without notes.
-      - name: Release notes from CHANGELOG.md
-        run: sh scripts/release-notes.sh "${GITHUB_REF_NAME#v}" > "$RUNNER_TEMP/release-notes.md"
       - uses: goreleaser/goreleaser-action@v7
+        if: steps.v.outputs.skip != 'true'
         with:
           version: "~> v2"
           args: release --clean --release-notes=${{ runner.temp }}/release-notes.md
