@@ -18,9 +18,13 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version: stable
+      # The release page shows this version's section of CHANGELOG.md. The step
+      # fails if the tag has no section there, so no release goes out without notes.
+      - name: Release notes from CHANGELOG.md
+        run: sh scripts/release-notes.sh "${GITHUB_REF_NAME#v}" > "$RUNNER_TEMP/release-notes.md"
       - uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
-          args: release --clean
+          args: release --clean --release-notes=${{ runner.temp }}/release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

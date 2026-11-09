@@ -20,6 +20,10 @@ one way: `cli → ui → results → measure → regions`.
 - `dev` is the default branch: all work and all pull requests go there.
 - `main` holds released code. It is updated only by a pull request from `dev`, and release
   tags (`vX.Y.Z`) are made on `main`; `.github/workflows/release.yml` runs GoReleaser.
+- User-facing changes get a line under **Unreleased** in `CHANGELOG.md`. To release, rename
+  that section to `## [X.Y.Z] - date` (plus its link at the bottom) on `dev`, merge to `main`,
+  then tag. The release page shows that section (`scripts/release-notes.sh`); a tag without
+  a section fails the release.
 - Both are protected: changes need a pull request, an approving review and passing CI.
 
 ## Before finishing a change
