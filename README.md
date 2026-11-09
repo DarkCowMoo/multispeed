@@ -68,6 +68,23 @@ multispeed -history              # trends from your past runs
 multispeed -every 1h -csv log.csv   # test every hour until Ctrl+C
 ```
 
+### Windows says "Windows protected your PC"
+
+Windows SmartScreen shows this for programs that are new and not yet code-signed. It is not a
+virus warning: SmartScreen simply hasn't seen this file often enough yet. To run it, click
+**More info**, then **Run anyway**. If you want to be sure the file is the one this project
+published, compare its SHA-256 (`Get-FileHash multispeed_windows_amd64.exe` in PowerShell) with
+`checksums.txt` on the release page. Signed Windows releases are on the way (see
+[Code signing policy](#code-signing-policy)). Installing with `go install` builds the program on
+your own computer, so no warning appears.
+
+### Uninstall
+
+multispeed doesn't install anything: delete the downloaded file (or, after `go install`,
+delete `multispeed` from your Go bin folder, shown by `go env GOPATH`). To also remove your saved
+results, delete the history folder: `%AppData%\multispeed` on Windows, `~/.config/multispeed`
+on Linux, `~/Library/Application Support/multispeed` on macOS.
+
 ## What you see
 
 - **Opening screen:** your provider, your public IP, a run ID, and the plan with an estimated time.
@@ -222,6 +239,37 @@ CI runs the linter, plus tests with `-race` on Linux, Windows and macOS. Pushing
 [CHANGELOG.md](CHANGELOG.md) as the release notes. Contributions go to the `dev` branch: see
 [CONTRIBUTING.md](CONTRIBUTING.md). `CLAUDE.md` has the conventions for anyone (or any Claude)
 working on the code.
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by
+[SignPath Foundation](https://signpath.org).
+
+*Status: applied for. Releases up to and including v0.1.0 are not signed yet.*
+
+Windows release files are built from this repository by GitHub Actions
+([release workflow](.github/workflows/release.yml)), and each release is approved by hand
+before it is signed. Only files built from this project's own source code are signed.
+
+| Role | Members |
+|---|---|
+| Committers and reviewers | [DarkCowMoo](https://github.com/DarkCowMoo) |
+| Approvers | [DarkCowMoo](https://github.com/DarkCowMoo) |
+
+Changes from anyone else come in as pull requests and are reviewed by a committer before they are
+merged (see [CONTRIBUTING.md](CONTRIBUTING.md)).
+
+### Privacy
+
+This program will not transfer any information to other networked systems unless specifically
+requested by the user or the person installing or operating it.
+
+What a test does, when you run it: multispeed asks Speedtest.net for its list of test servers
+and for your connection details (internet provider, public IP address, approximate location),
+then downloads from and uploads to the chosen test servers. With `-route` it also runs your
+system's `tracert`/`traceroute` and looks up the names of the routers on the way. Your results
+are saved only on your own computer (the history file, and the CSV or HTML files you ask for);
+your IP address is shown on screen but not saved. multispeed sends nothing to its authors.
 
 ## Credits
 
