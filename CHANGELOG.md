@@ -7,6 +7,13 @@ All notable changes to multispeed are listed here, newest first. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- Windows files now carry version information (product name and version, shown under
+  Properties → Details), a step towards signed Windows releases.
+- The README explains the "Windows protected your PC" warning, how to check a download against
+  `checksums.txt`, how to uninstall, and the project's code signing and privacy policy.
+
 ## [0.1.0] - 2026-11-09
 
 The first release: test your internet speed to many regions of the world at once.

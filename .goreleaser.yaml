@@ -8,6 +8,19 @@ before:
   hooks:
     - go mod tidy
     - go test -short ./...
+    # Windows version information (product name and version, shown in the file's
+    # Properties; required for code signing by SignPath). go-winres writes
+    # rsrc_windows_*.syso next to main.go, which `go build` links into Windows
+    # builds only. Numeric versions keep snapshot builds (1.2.3-SNAPSHOT-…) valid.
+    - >-
+      go run github.com/tc-hib/go-winres@v0.3.3 simply
+      --arch amd64,arm64
+      --product-name multispeed
+      --product-version {{ .Major }}.{{ .Minor }}.{{ .Patch }}.0
+      --file-version {{ .Major }}.{{ .Minor }}.{{ .Patch }}.0
+      --file-description "multispeed: internet speed to many regions"
+      --copyright "Copyright (c) 2026 multispeed contributors"
+      --original-filename multispeed.exe
 
 builds:
   - id: multispeed
@@ -46,5 +59,8 @@ changelog:
 
 release:
   footer: |
-    **Windows:** download `multispeed_windows_amd64.exe` and double-click it.
+    **Windows:** download `multispeed_windows_amd64.exe` and double-click it. If Windows says
+    "Windows protected your PC", see [Windows warning](https://github.com/DarkCowMoo/multispeed#windows-says-windows-protected-your-pc).
     **macOS / Linux:** download the archive for your system, then run `./multispeed` in a terminal.
+
+    [Code signing policy](https://github.com/DarkCowMoo/multispeed#code-signing-policy)
